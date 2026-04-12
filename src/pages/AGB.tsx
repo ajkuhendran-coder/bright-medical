@@ -293,13 +293,6 @@ export default function AGB() {
             </p>
           </div>
 
-          {/* Hinweiskasten */}
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
-            <p className="text-amber-800 text-sm">
-              <strong>Hinweis:</strong> Diese Texte wurden mit KI-Unterst&uuml;tzung erstellt und
-              sollten von einem Fachanwalt gepr&uuml;ft werden.
-            </p>
-          </div>
         </div>
       </div>
     </div>
