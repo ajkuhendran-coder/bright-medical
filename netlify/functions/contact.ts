@@ -1,8 +1,6 @@
 import type { Handler } from '@netlify/functions'
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
-
 const ADMIN_EMAIL = 'info@brightmedical.de'
 const FROM_EMAIL = 'Bright Medical <noreply@brightmedical.de>'
 
@@ -11,6 +9,14 @@ const handler: Handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) }
   }
+
+  // Init Resend inside handler to avoid crash if env var is missing
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) {
+    console.error('RESEND_API_KEY not set. Available env vars:', Object.keys(process.env).filter(k => k.includes('RESEND')))
+    return { statusCode: 500, body: JSON.stringify({ error: 'Server-Konfigurationsfehler' }) }
+  }
+  const resend = new Resend(apiKey)
 
   // Rate limiting headers check
   const ip = event.headers['x-forwarded-for'] || event.headers['client-ip'] || 'unknown'
