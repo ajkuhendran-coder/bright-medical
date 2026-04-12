@@ -22,7 +22,7 @@ export default function Datenschutz() {
               Inhaber: Ajanth Kuhendran<br />
               Am Alten G&uuml;terbahnhof 24<br />
               76646 Bruchsal<br />
-              E-Mail: info@bright-medical.de
+              E-Mail: info@brightmedical.de
             </p>
           </div>
 
@@ -213,7 +213,7 @@ export default function Datenschutz() {
               <li><strong>Recht auf Widerruf erteilter Einwilligungen</strong> (Art. 7 Abs. 3 DSGVO)</li>
             </ul>
             <p className="text-slate-body/80 leading-relaxed mt-2">
-              Zur Aus&uuml;bung Ihrer Rechte wenden Sie sich bitte an: info@bright-medical.de
+              Zur Aus&uuml;bung Ihrer Rechte wenden Sie sich bitte an: info@brightmedical.de
             </p>
           </div>
 

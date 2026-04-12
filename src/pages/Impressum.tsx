@@ -25,7 +25,7 @@ export default function Impressum() {
           <div>
             <h2 className="text-xl font-bold text-navy mb-2">Kontakt</h2>
             <p className="text-slate-body/80 leading-relaxed">
-              E-Mail: info@bright-medical.de<br />
+              E-Mail: info@brightmedical.de<br />
               Telefon: Auf Anfrage
             </p>
           </div>

@@ -23,8 +23,8 @@ export default function Footer() {
               </div>
               <div className="flex items-center gap-3 text-white/70 text-sm">
                 <Mail size={16} className="text-teal shrink-0" />
-                <a href="mailto:info@bright-medical.de" className="hover:text-teal transition-colors text-white/70 no-underline">
-                  info@bright-medical.de
+                <a href="mailto:info@brightmedical.de" className="hover:text-teal transition-colors text-white/70 no-underline">
+                  info@brightmedical.de
                 </a>
               </div>
               <div className="flex items-center gap-3 text-white/70 text-sm">

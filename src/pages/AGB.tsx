@@ -142,7 +142,7 @@ export default function AGB() {
               <p className="text-slate-body/80 leading-relaxed mt-2">
                 Um Ihr Widerrufsrecht auszu&uuml;ben, m&uuml;ssen Sie uns &ndash; Bright Medical,
                 Inhaber Ajanth Kuhendran, Am Alten G&uuml;terbahnhof 24, 76646 Bruchsal,
-                E-Mail: info@bright-medical.de &ndash; mittels einer eindeutigen Erkl&auml;rung
+                E-Mail: info@brightmedical.de &ndash; mittels einer eindeutigen Erkl&auml;rung
                 (z.&nbsp;B. ein mit der Post versandter Brief oder eine E-Mail) &uuml;ber Ihren
                 Entschluss, diesen Vertrag zu widerrufen, informieren.
               </p>
