@@ -26,16 +26,15 @@ export default function Impressum() {
             <h2 className="text-xl font-bold text-navy mb-2">Kontakt</h2>
             <p className="text-slate-body/80 leading-relaxed">
               E-Mail: info@brightmedical.de<br />
-              Telefon: Auf Anfrage
+              Telefon: 07251 942940
             </p>
           </div>
 
           {/* Umsatzsteuer */}
           <div>
-            <h2 className="text-xl font-bold text-navy mb-2">Umsatzsteuer-Identifikationsnummer</h2>
+            <h2 className="text-xl font-bold text-navy mb-2">Umsatzsteuer</h2>
             <p className="text-slate-body/80 leading-relaxed">
-              Umsatzsteuer-Identifikationsnummer gem&auml;&szlig; &sect; 27a Umsatzsteuergesetz:<br />
-              <em>[wird nach Erteilung erg&auml;nzt]</em>
+              Kleinunternehmer gem&auml;&szlig; &sect; 19 UStG. Es wird keine Umsatzsteuer ausgewiesen.
             </p>
           </div>
 

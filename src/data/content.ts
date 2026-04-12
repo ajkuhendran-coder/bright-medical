@@ -92,7 +92,7 @@ export const programs: Program[] = [
     title: 'Darmgesundheit & Erschöpfung',
     subtitle: 'Ursachen statt Symptome',
     description: 'Seit Monaten — vielleicht Jahren — kämpfen Sie mit Müdigkeit, Blähungen oder Unverträglichkeiten. Sie haben sich damit abgefunden. Aber was wenn Ihr Darm der Schlüssel ist, der alles andere beeinflusst?',
-    targetGroup: 'Für Sie bei chronischer Müdigkeit, Reizdarm, Post-COVID-Symptomen oder unerklärlichen Verdauungsproblemen.',
+    targetGroup: 'Für Sie bei chronischer Müdigkeit, Reizdarm, anhaltender Erschöpfung oder unerklärlichen Verdauungsproblemen.',
     features: [
       { text: 'Persönliche Coaching-Calls mit Ihrem Arzt' },
       { text: 'Ernährungsprotokoll für Darmgesundheit' },
