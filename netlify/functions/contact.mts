@@ -1,48 +1,49 @@
 import { Resend } from 'resend'
-
-// Workaround: access process.env indirectly to prevent esbuild from replacing it
-const getEnv = (key: string): string | undefined => {
-  const env = globalThis.process?.env
-  return env?.[key]
-}
+import type { Context } from '@netlify/functions'
 
 const ADMIN_EMAIL = 'info@brightmedical.de'
 const FROM_EMAIL = 'Bright Medical <noreply@brightmedical.de>'
 
-export const handler = async (event: { httpMethod: string; headers: Record<string, string>; body: string | null }) => {
+export default async (req: Request, _context: Context) => {
   // Only allow POST
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) }
+  if (req.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 })
   }
 
-  const apiKey = getEnv('RESEND_API_KEY')
-  console.log('API key present:', !!apiKey, '| key length:', apiKey?.length ?? 0)
+  // Netlify v2: env vars via Netlify.env.get()
+  const apiKey = Netlify.env.get('RESEND_API_KEY')
+  console.log('API key present:', !!apiKey, '| length:', apiKey?.length ?? 0)
+  console.log('All RESEND vars:', JSON.stringify(
+    Object.fromEntries(
+      Object.entries(Netlify.env.toObject()).filter(([k]) => k.includes('RESEND'))
+    )
+  ))
+
   if (!apiKey) {
-    console.error('RESEND_API_KEY not available at runtime')
-    return { statusCode: 500, body: JSON.stringify({ error: 'Server-Konfigurationsfehler' }) }
+    console.error('RESEND_API_KEY not available')
+    return new Response(JSON.stringify({ error: 'Server-Konfigurationsfehler' }), { status: 500 })
   }
-  const resend = new Resend(apiKey)
 
-  // Rate limiting headers check
-  const ip = event.headers['x-forwarded-for'] || event.headers['client-ip'] || 'unknown'
+  const resend = new Resend(apiKey)
+  const ip = req.headers.get('x-forwarded-for') || req.headers.get('client-ip') || 'unknown'
 
   try {
-    const data = JSON.parse(event.body || '{}')
+    const data = await req.json()
 
     // Honeypot check
     if (data.honeypot) {
-      return { statusCode: 200, body: JSON.stringify({ success: true }) }
+      return new Response(JSON.stringify({ success: true }), { status: 200 })
     }
 
     // Validate required fields
     const { name, email, message } = data
     if (!name || !email || !message) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'Pflichtfelder fehlen' }) }
+      return new Response(JSON.stringify({ error: 'Pflichtfelder fehlen' }), { status: 400 })
     }
 
     // Email validation
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'Ungültige E-Mail-Adresse' }) }
+      return new Response(JSON.stringify({ error: 'Ungültige E-Mail-Adresse' }), { status: 400 })
     }
 
     // 1. Send admin notification
@@ -89,16 +90,12 @@ export const handler = async (event: { httpMethod: string; headers: Record<strin
       `,
     })
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ success: true }),
-    }
+    return new Response(JSON.stringify({ success: true }), { status: 200 })
   } catch (error) {
     console.error('Contact form error:', error)
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'Fehler beim Senden. Bitte versuchen Sie es erneut.' }),
-    }
+    return new Response(
+      JSON.stringify({ error: 'Fehler beim Senden. Bitte versuchen Sie es erneut.' }),
+      { status: 500 }
+    )
   }
 }
-
