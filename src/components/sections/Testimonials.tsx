@@ -14,7 +14,7 @@ export default function Testimonials() {
             Was Teilnehmer berichten
           </h2>
           <p className="text-sm text-slate-body/50">
-            Beispielhafte Erfahrungsberichte — individuelle Ergebnisse koennen variieren.
+            Beispielhafte Erfahrungsberichte — individuelle Ergebnisse können variieren.
           </p>
         </div>
 

@@ -48,13 +48,13 @@ export default function Contact() {
           <div className="animate-on-scroll">
             <CheckCircle size={64} className="text-teal mx-auto mb-6" />
             <h2 className="text-3xl font-bold text-white mb-4">
-              Vielen Dank fuer Ihre Anfrage!
+              Vielen Dank für Ihre Anfrage!
             </h2>
             <p className="text-white/70 mb-4">
               Wir haben Ihre Nachricht erhalten und melden uns innerhalb von 24 Stunden bei Ihnen.
             </p>
             <p className="text-white/50 text-sm">
-              Sie erhalten in Kuerze eine Bestaetigungsemail mit weiteren Informationen.
+              Sie erhalten in Kürze eine Bestätigungsemail mit weiteren Informationen.
             </p>
           </div>
         </div>
@@ -71,7 +71,7 @@ export default function Contact() {
             Lassen Sie uns herausfinden, ob wir zusammenpassen
           </h2>
           <p className="text-white/60">
-            Ein paar kurze Fragen helfen uns, Ihre Situation besser zu verstehen — damit wir im Erstgespraech direkt fuer Sie da sein koennen.
+            Ein paar kurze Fragen helfen uns, Ihre Situation besser zu verstehen — damit wir im Erstgespräch direkt für Sie da sein können.
           </p>
         </div>
 
@@ -102,37 +102,37 @@ export default function Contact() {
           </div>
 
           <div className="mb-4">
-            <label className="block text-sm font-medium text-navy mb-1.5">Welches Thema beschaeftigt Sie am meisten? *</label>
+            <label className="block text-sm font-medium text-navy mb-1.5">Welches Thema beschäftigt Sie am meisten? *</label>
             <select name="subject" value={formData.subject} onChange={handleChange} required className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm bg-white">
-              <option value="">Bitte waehlen...</option>
-              <option value="Gewichtsoptimierung">Gewicht & Stoffwechsel — Ich moechte dauerhaft abnehmen</option>
-              <option value="Hormonoptimierung">Hormone — Energie, Schlaf und Vitalitaet optimieren</option>
-              <option value="Darmgesundheit">Darm — Verdauung, Erschoepfung, Post-COVID</option>
-              <option value="Longevity">Longevity — Gesund und vital aelter werden</option>
+              <option value="">Bitte wählen...</option>
+              <option value="Gewichtsoptimierung">Gewicht & Stoffwechsel — Ich möchte dauerhaft abnehmen</option>
+              <option value="Hormonoptimierung">Hormone — Energie, Schlaf und Vitalität optimieren</option>
+              <option value="Darmgesundheit">Darm — Verdauung, Erschöpfung, Post-COVID</option>
+              <option value="Longevity">Longevity — Gesund und vital älter werden</option>
               <option value="Unsicher">Ich bin unsicher, was am besten passt</option>
             </select>
           </div>
 
           <div className="mb-4">
             <label className="block text-sm font-medium text-navy mb-1.5">Beschreiben Sie kurz Ihre aktuelle Situation *</label>
-            <textarea name="situation" value={formData.situation} onChange={handleChange} required rows={3} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm resize-none" placeholder="Was belastet Sie aktuell am meisten? Wie fuehlen Sie sich im Alltag?" />
+            <textarea name="situation" value={formData.situation} onChange={handleChange} required rows={3} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm resize-none" placeholder="Was belastet Sie aktuell am meisten? Wie fühlen Sie sich im Alltag?" />
           </div>
 
           <div className="mb-4">
             <label className="block text-sm font-medium text-navy mb-1.5">Was haben Sie bisher versucht? (optional)</label>
-            <textarea name="tried" value={formData.tried} onChange={handleChange} rows={2} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm resize-none" placeholder="Diaeten, Programme, Arztbesuche — was hat bisher nicht funktioniert?" />
+            <textarea name="tried" value={formData.tried} onChange={handleChange} rows={2} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm resize-none" placeholder="Diäten, Programme, Arztbesuche — was hat bisher nicht funktioniert?" />
           </div>
 
           <div className="mb-6">
-            <label className="block text-sm font-medium text-navy mb-1.5">Moechten Sie uns noch etwas mitteilen? (optional)</label>
-            <textarea name="message" value={formData.message} onChange={handleChange} rows={2} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm resize-none" placeholder="Fragen, Wuensche, Anmerkungen..." />
+            <label className="block text-sm font-medium text-navy mb-1.5">Möchten Sie uns noch etwas mitteilen? (optional)</label>
+            <textarea name="message" value={formData.message} onChange={handleChange} rows={2} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm resize-none" placeholder="Fragen, Wünsche, Anmerkungen..." />
           </div>
 
           <div className="mb-6">
             <label className="flex items-start gap-3 cursor-pointer">
               <input type="checkbox" name="privacy" checked={formData.privacy} onChange={handleChange} required className="mt-0.5 w-5 h-5 rounded border-gray-300 text-teal focus:ring-teal" />
               <span className="text-xs text-slate-body/60 leading-relaxed">
-                Ich habe die Datenschutzerklaerung gelesen und bin mit der Verarbeitung meiner Daten
+                Ich habe die Datenschutzerklärung gelesen und bin mit der Verarbeitung meiner Daten
                 zur Beantwortung meiner Anfrage einverstanden. *
               </span>
             </label>

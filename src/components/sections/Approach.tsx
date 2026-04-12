@@ -5,17 +5,17 @@ const pillars = [
   {
     icon: Search,
     title: 'Wir analysieren',
-    description: 'Umfassende Diagnostik, die ueber den Kassenstandard hinausgeht. Wir schauen auf das, was andere uebersehen — damit wir verstehen, warum Ihr Koerper nicht mitspielt.',
+    description: 'Umfassende Diagnostik, die über den Kassenstandard hinausgeht. Wir schauen auf das, was andere übersehen — damit wir verstehen, warum Ihr Körper nicht mitspielt.',
   },
   {
     icon: FileText,
     title: 'Wir stabilisieren',
-    description: 'Ihr individueller Plan: Ernaehrung, Bewegung, Schlaf, Supplemente — massgeschneidert auf Ihre Biologie. Kein Schema F, kein Trend. Sondern das, was fuer SIE funktioniert.',
+    description: 'Ihr individueller Plan: Ernährung, Bewegung, Schlaf, Supplemente — maßgeschneidert auf Ihre Biologie. Kein Schema F, kein Trend. Sondern das, was für SIE funktioniert.',
   },
   {
     icon: Users,
     title: 'Wir sichern langfristig',
-    description: 'Regelmaessige Coaching-Calls, WhatsApp-Support und aerztliche Kontrollen. Sie sind nie allein — und Ihre Ergebnisse bleiben.',
+    description: 'Regelmäßige Coaching-Calls, WhatsApp-Support und ärztliche Kontrollen. Sie sind nie allein — und Ihre Ergebnisse bleiben.',
   },
 ]
 
@@ -31,9 +31,9 @@ export default function Approach() {
             Medizin, die zusammendenkt
           </h2>
           <p className="text-lg text-slate-body/70 max-w-3xl mx-auto">
-            Ein Orchester mit 20 Spezialisten spielt Laerm, wenn niemand den Takt vorgibt.
-            Der Kardiologe optimiert das Herz, der Endokrinologe die Schilddruese — aber niemand sieht das Gesamtbild.
-            Bright Medical haelt alle Faeden zusammen.
+            Ein Orchester mit 20 Spezialisten spielt Lärm, wenn niemand den Takt vorgibt.
+            Der Kardiologe optimiert das Herz, der Endokrinologe die Schilddrüse — aber niemand sieht das Gesamtbild.
+            Bright Medical hält alle Fäden zusammen.
           </p>
         </div>
 

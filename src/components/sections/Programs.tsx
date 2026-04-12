@@ -23,10 +23,10 @@ export default function Programs() {
           <div className="text-center mb-16 animate-on-scroll">
             <span className="text-teal text-sm font-semibold tracking-wider uppercase">Unsere Programme</span>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-navy mt-4 mb-6">
-              Wo moechten Sie anfangen?
+              Ihr erster Schritt zu nachhaltiger Gesundheit
             </h2>
             <p className="text-lg text-slate-body/70 max-w-2xl mx-auto">
-              Ein Ziel: Ihre Gesundheit nachhaltig optimieren — mit aerztlicher Expertise und persoenlichem Coaching. Wir empfehlen, mit unserem Hauptprogramm zu starten.
+              Ein Ziel: Ihre Gesundheit nachhaltig optimieren — mit ärztlicher Expertise und persönlichem Coaching. Wir empfehlen, mit unserem Hauptprogramm zu starten.
             </p>
           </div>
 

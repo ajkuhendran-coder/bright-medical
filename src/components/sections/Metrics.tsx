@@ -15,7 +15,7 @@ export default function Metrics() {
         <div className="text-center mb-16 animate-on-scroll">
           <span className="text-teal text-sm font-semibold tracking-wider uppercase">Messbare Ergebnisse</span>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-navy mt-4 mb-6">
-            Wir messen, was sich veraendert
+            Wir messen, was sich verändert
           </h2>
           <p className="text-lg text-slate-body/70 max-w-2xl mx-auto">
             Nicht nur auf der Waage — sondern in allen Dimensionen Ihrer Gesundheit.

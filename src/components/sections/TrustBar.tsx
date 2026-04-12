@@ -2,7 +2,7 @@ import { Stethoscope, FlaskConical, BookOpen, MapPin } from 'lucide-react'
 import { useScrollAnimation } from '../../hooks/useScrollAnimation'
 
 const trustItems = [
-  { icon: Stethoscope, label: 'Facharzt fuer Allgemeinmedizin' },
+  { icon: Stethoscope, label: 'Facharzt für Allgemeinmedizin' },
   { icon: FlaskConical, label: 'Funktionelle Medizin' },
   { icon: BookOpen, label: 'Wissenschaftlich fundiert' },
   { icon: MapPin, label: 'Online & in Bruchsal' },

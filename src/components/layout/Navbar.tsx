@@ -5,7 +5,7 @@ import { Menu, X } from 'lucide-react'
 const navLinks = [
   { label: 'Start', href: '#hero' },
   { label: 'Programme', href: '#programme' },
-  { label: 'Ueber mich', href: '#ueber-mich' },
+  { label: 'Über mich', href: '#ueber-mich' },
   { label: 'FAQ', href: '#faq' },
   { label: 'Kontakt', href: '#kontakt' },
 ]
@@ -79,7 +79,7 @@ export default function Navbar() {
               onClick={() => handleNavClick('#kontakt')}
               className="bg-teal hover:bg-teal-dark text-white px-6 py-2.5 rounded-full text-sm font-semibold transition-all cursor-pointer border-none shadow-lg shadow-teal/25"
             >
-              Erstgespraech sichern
+              Erstgespräch sichern
             </button>
           </div>
 
@@ -113,7 +113,7 @@ export default function Navbar() {
               onClick={() => handleNavClick('#kontakt')}
               className="bg-teal hover:bg-teal-dark text-white px-8 py-3 rounded-full text-base font-semibold transition-all cursor-pointer border-none mt-4"
             >
-              Kostenloses Erstgespraech
+              Kostenloses Erstgespräch
             </button>
           </div>
         </div>

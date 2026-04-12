@@ -15,7 +15,7 @@ export default function ProgramModal({ program, onClose }: ProgramModalProps) {
           <button
             onClick={onClose}
             className="absolute top-4 right-4 text-white/60 hover:text-white transition-colors bg-transparent border-none cursor-pointer"
-            aria-label="Schliessen"
+            aria-label="Schließen"
           >
             <X size={24} />
           </button>
@@ -30,7 +30,7 @@ export default function ProgramModal({ program, onClose }: ProgramModalProps) {
           {/* Target Group */}
           <div className="bg-slate-light rounded-xl p-4">
             <p className="text-sm text-slate-body/70">
-              <span className="font-semibold text-navy">Fuer wen?</span> {program.targetGroup}
+              <span className="font-semibold text-navy">Für wen?</span> {program.targetGroup}
             </p>
           </div>
 
@@ -60,7 +60,7 @@ export default function ProgramModal({ program, onClose }: ProgramModalProps) {
             }}
             className="w-full bg-teal hover:bg-teal-dark text-white py-4 rounded-full font-semibold transition-all cursor-pointer border-none shadow-lg shadow-teal/25"
           >
-            Unverbindliches Erstgespraech vereinbaren
+            Unverbindliches Erstgespräch vereinbaren
           </button>
 
           {/* Note */}

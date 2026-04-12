@@ -34,15 +34,15 @@ export default function Hero() {
           {/* Headline */}
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6">
             Endlich dauerhaft abnehmen —{' '}
-            <span className="text-teal">aerztlich begleitet</span>, mit messbaren Ergebnissen.
+            <span className="text-teal">ärztlich begleitet</span>, mit messbaren Ergebnissen.
           </h1>
 
           {/* Subline */}
           <p className="text-lg sm:text-xl text-white/80 leading-relaxed mb-4 font-[var(--font-body)] max-w-2xl">
-            Stellen Sie sich vor, Sie wachen morgens auf und fuehlen sich endlich wieder energiegeladen. Kein Jo-Jo. Kein naechster Versuch. Sondern ein Plan, der auf Ihrer Biologie basiert.
+            Stellen Sie sich vor, Sie wachen morgens auf und fühlen sich endlich wieder energiegeladen. Kein Jo-Jo. Kein nächster Versuch. Sondern ein Plan, der auf Ihrer Biologie basiert.
           </p>
           <p className="text-base text-white/50 mb-10 font-[var(--font-body)]">
-            Bright Medical beginnt dort, wo die Kassenmedizin aufhoert.
+            Bright Medical beginnt dort, wo die Kassenmedizin aufhört.
           </p>
 
           {/* CTAs */}
@@ -51,7 +51,7 @@ export default function Hero() {
               onClick={() => scrollTo('#kontakt')}
               className="bg-teal hover:bg-teal-dark text-white px-8 py-4 rounded-full text-base font-semibold transition-all cursor-pointer border-none shadow-xl shadow-teal/30 hover:shadow-teal/40"
             >
-              Kostenloses Erstgespraech sichern
+              Kostenloses Erstgespräch sichern
             </button>
             <button
               onClick={() => scrollTo('#programme')}

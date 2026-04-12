@@ -11,7 +11,7 @@ export default function FAQ() {
     <section id="faq" className="py-20 lg:py-28 bg-white" ref={ref}>
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16 animate-on-scroll">
-          <span className="text-teal text-sm font-semibold tracking-wider uppercase">Haeufige Fragen</span>
+          <span className="text-teal text-sm font-semibold tracking-wider uppercase">Häufige Fragen</span>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-navy mt-4 mb-6">
             Ihre Fragen, beantwortet
           </h2>

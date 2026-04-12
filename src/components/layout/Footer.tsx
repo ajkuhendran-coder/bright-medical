@@ -14,12 +14,12 @@ export default function Footer() {
               className="h-10 w-auto mb-4"
             />
             <p className="text-white/60 text-sm leading-relaxed">
-              Aerztlich begleitet. Individuell optimiert.
+              Ärztlich begleitet. Individuell optimiert.
             </p>
             <div className="mt-6 space-y-3">
               <div className="flex items-center gap-3 text-white/70 text-sm">
                 <MapPin size={16} className="text-teal shrink-0" />
-                <span>Am Alten Gueterbahnhof 24, 76646 Bruchsal</span>
+                <span>Am Alten Güterbahnhof 24, 76646 Bruchsal</span>
               </div>
               <div className="flex items-center gap-3 text-white/70 text-sm">
                 <Mail size={16} className="text-teal shrink-0" />
@@ -42,7 +42,7 @@ export default function Footer() {
                 Impressum
               </Link>
               <Link to="/datenschutz" className="block text-white/60 hover:text-teal transition-colors text-sm no-underline">
-                Datenschutzerklaerung
+                Datenschutzerklärung
               </Link>
               <Link to="/agb" className="block text-white/60 hover:text-teal transition-colors text-sm no-underline">
                 AGB
@@ -55,9 +55,9 @@ export default function Footer() {
             <h4 className="text-white font-semibold mb-4 font-[var(--font-body)]">Hinweis</h4>
             <p className="text-white/50 text-xs leading-relaxed">
               Coaching-Dienstleistung im zweiten Gesundheitsmarkt. Keine Kassenleistung.
-              Coaching umfasst Lebensstil, Schlaf, Ernaehrung, Stress, Routinen & Umsetzung.
-              Diagnostik, Laboranalysen und Therapieentscheidungen erfolgen ausschliesslich
-              in der aerztlichen Sprechstunde gemaess GOAe. Aerztliche Leistungen werden
+              Coaching umfasst Lebensstil, Schlaf, Ernährung, Stress, Routinen & Umsetzung.
+              Diagnostik, Laboranalysen und Therapieentscheidungen erfolgen ausschließlich
+              in der ärztlichen Sprechstunde gemäß GOÄ. Ärztliche Leistungen werden
               separat abgerechnet.
             </p>
           </div>
