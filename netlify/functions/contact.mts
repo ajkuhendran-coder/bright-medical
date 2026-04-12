@@ -58,6 +58,7 @@ export default async (req: Request, _context: Context) => {
     const firstName = name.split(' ')[0]
     await resend.emails.send({
       from: FROM_EMAIL,
+      replyTo: ADMIN_EMAIL,
       to: email,
       subject: 'Ihre Anfrage bei Bright Medical — wir melden uns!',
       html: `
