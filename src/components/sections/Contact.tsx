@@ -1,0 +1,169 @@
+import { useState } from 'react'
+import { Send, CheckCircle, AlertCircle } from 'lucide-react'
+import { useScrollAnimation } from '../../hooks/useScrollAnimation'
+
+type FormState = 'idle' | 'submitting' | 'success' | 'error'
+
+export default function Contact() {
+  const ref = useScrollAnimation()
+  const [formState, setFormState] = useState<FormState>('idle')
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    subject: '',
+    situation: '',
+    tried: '',
+    message: '',
+    privacy: false,
+    honeypot: '',
+  })
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const target = e.target
+    const value = target instanceof HTMLInputElement && target.type === 'checkbox' ? target.checked : target.value
+    setFormData((prev) => ({ ...prev, [target.name]: value }))
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (formData.honeypot) return
+
+    setFormState('submitting')
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+      setFormState('success')
+      setFormData({ firstName: '', lastName: '', email: '', phone: '', subject: '', situation: '', tried: '', message: '', privacy: false, honeypot: '' })
+    } catch {
+      setFormState('error')
+    }
+  }
+
+  if (formState === 'success') {
+    return (
+      <section id="kontakt" className="py-20 lg:py-28 bg-navy" ref={ref}>
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="animate-on-scroll">
+            <CheckCircle size={64} className="text-teal mx-auto mb-6" />
+            <h2 className="text-3xl font-bold text-white mb-4">
+              Vielen Dank fuer Ihre Anfrage!
+            </h2>
+            <p className="text-white/70 mb-4">
+              Wir haben Ihre Nachricht erhalten und melden uns innerhalb von 24 Stunden bei Ihnen.
+            </p>
+            <p className="text-white/50 text-sm">
+              Sie erhalten in Kuerze eine Bestaetigungsemail mit weiteren Informationen.
+            </p>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  return (
+    <section id="kontakt" className="py-20 lg:py-28 bg-navy" ref={ref}>
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-12 animate-on-scroll">
+          <span className="text-teal text-sm font-semibold tracking-wider uppercase">Der erste Schritt</span>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mt-4 mb-6">
+            Lassen Sie uns herausfinden, ob wir zusammenpassen
+          </h2>
+          <p className="text-white/60">
+            Ein paar kurze Fragen helfen uns, Ihre Situation besser zu verstehen — damit wir im Erstgespraech direkt fuer Sie da sein koennen.
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="animate-on-scroll bg-white rounded-2xl p-8 shadow-2xl">
+          {/* Honeypot */}
+          <input type="text" name="honeypot" value={formData.honeypot} onChange={handleChange} className="hidden" tabIndex={-1} autoComplete="off" aria-hidden="true" />
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-navy mb-1.5">Vorname *</label>
+              <input type="text" name="firstName" value={formData.firstName} onChange={handleChange} required className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm" placeholder="Ihr Vorname" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-navy mb-1.5">Nachname *</label>
+              <input type="text" name="lastName" value={formData.lastName} onChange={handleChange} required className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm" placeholder="Ihr Nachname" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-navy mb-1.5">E-Mail *</label>
+              <input type="email" name="email" value={formData.email} onChange={handleChange} required className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm" placeholder="ihre@email.de" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-navy mb-1.5">Telefon (optional)</label>
+              <input type="tel" name="phone" value={formData.phone} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm" placeholder="+49 ..." />
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-navy mb-1.5">Welches Thema beschaeftigt Sie am meisten? *</label>
+            <select name="subject" value={formData.subject} onChange={handleChange} required className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm bg-white">
+              <option value="">Bitte waehlen...</option>
+              <option value="Gewichtsoptimierung">Gewicht & Stoffwechsel — Ich moechte dauerhaft abnehmen</option>
+              <option value="Hormonoptimierung">Hormone — Energie, Schlaf und Vitalitaet optimieren</option>
+              <option value="Darmgesundheit">Darm — Verdauung, Erschoepfung, Post-COVID</option>
+              <option value="Longevity">Longevity — Gesund und vital aelter werden</option>
+              <option value="Unsicher">Ich bin unsicher, was am besten passt</option>
+            </select>
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-navy mb-1.5">Beschreiben Sie kurz Ihre aktuelle Situation *</label>
+            <textarea name="situation" value={formData.situation} onChange={handleChange} required rows={3} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm resize-none" placeholder="Was belastet Sie aktuell am meisten? Wie fuehlen Sie sich im Alltag?" />
+          </div>
+
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-navy mb-1.5">Was haben Sie bisher versucht? (optional)</label>
+            <textarea name="tried" value={formData.tried} onChange={handleChange} rows={2} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm resize-none" placeholder="Diaeten, Programme, Arztbesuche — was hat bisher nicht funktioniert?" />
+          </div>
+
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-navy mb-1.5">Moechten Sie uns noch etwas mitteilen? (optional)</label>
+            <textarea name="message" value={formData.message} onChange={handleChange} rows={2} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm resize-none" placeholder="Fragen, Wuensche, Anmerkungen..." />
+          </div>
+
+          <div className="mb-6">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input type="checkbox" name="privacy" checked={formData.privacy} onChange={handleChange} required className="mt-0.5 w-5 h-5 rounded border-gray-300 text-teal focus:ring-teal" />
+              <span className="text-xs text-slate-body/60 leading-relaxed">
+                Ich habe die Datenschutzerklaerung gelesen und bin mit der Verarbeitung meiner Daten
+                zur Beantwortung meiner Anfrage einverstanden. *
+              </span>
+            </label>
+          </div>
+
+          {formState === 'error' && (
+            <div className="mb-4 flex items-center gap-2 text-red-500 text-sm bg-red-50 p-3 rounded-xl">
+              <AlertCircle size={18} />
+              <span>Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.</span>
+            </div>
+          )}
+
+          <button type="submit" disabled={formState === 'submitting'} className="w-full bg-teal hover:bg-teal-dark text-white py-4 rounded-full text-base font-semibold transition-all cursor-pointer border-none shadow-lg shadow-teal/25 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+            {formState === 'submitting' ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Wird gesendet...
+              </>
+            ) : (
+              <>
+                <Send size={18} />
+                Anfrage absenden
+              </>
+            )}
+          </button>
+
+          <p className="text-xs text-center text-slate-body/40 mt-4">
+            Wir melden uns innerhalb von 24 Stunden. Coaching-Dienstleistung im zweiten Gesundheitsmarkt.
+          </p>
+        </form>
+      </div>
+    </section>
+  )
+}

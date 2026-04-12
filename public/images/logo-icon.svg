@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80">
+  <!-- Teal arc over the B -->
+  <path d="M18 38 Q18 14 46 14" fill="none" stroke="#06B6D4" stroke-width="5" stroke-linecap="round"/>
+  <!-- Teal dot at the top of the arc -->
+  <circle cx="48" cy="12" r="4" fill="#06B6D4"/>
+  <!-- BM letters in navy bold -->
+  <text x="14" y="62" font-family="Arial, Helvetica, sans-serif" font-weight="800" font-size="42" fill="#0F2A55" letter-spacing="-1">BM</text>
+</svg>
