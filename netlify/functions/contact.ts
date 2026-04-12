@@ -1,27 +1,26 @@
-import type { Handler } from '@netlify/functions'
 import { Resend } from 'resend'
+
+// Workaround: access process.env indirectly to prevent esbuild from replacing it
+const getEnv = (key: string): string | undefined => {
+  const env = globalThis.process?.env
+  return env?.[key]
+}
 
 const ADMIN_EMAIL = 'info@brightmedical.de'
 const FROM_EMAIL = 'Bright Medical <noreply@brightmedical.de>'
 
-const handler: Handler = async (event) => {
+export const handler = async (event: { httpMethod: string; headers: Record<string, string>; body: string | null }) => {
   // Only allow POST
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) }
   }
 
-  // Init Resend inside handler to avoid crash if env var is missing
-  // Debug: log all available env var keys (not values) to diagnose missing vars
-  const allKeys = Object.keys(process.env)
-  console.log('Total env vars:', allKeys.length, '| Sample keys:', allKeys.slice(0, 10))
-  console.log('RESEND keys:', allKeys.filter(k => k.includes('RESEND')))
-
-  const apiKey = process.env.RESEND_API_KEY
+  const apiKey = getEnv('RESEND_API_KEY')
+  console.log('API key present:', !!apiKey, '| key length:', apiKey?.length ?? 0)
   if (!apiKey) {
-    console.error('RESEND_API_KEY not set')
+    console.error('RESEND_API_KEY not available at runtime')
     return { statusCode: 500, body: JSON.stringify({ error: 'Server-Konfigurationsfehler' }) }
   }
-  console.log('RESEND_API_KEY found, length:', apiKey.length)
   const resend = new Resend(apiKey)
 
   // Rate limiting headers check
@@ -103,4 +102,3 @@ const handler: Handler = async (event) => {
   }
 }
 
-export { handler }
