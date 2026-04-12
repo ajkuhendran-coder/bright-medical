@@ -9,7 +9,7 @@ export default function Footer() {
           {/* Logo & Tagline */}
           <div>
             <img
-              src="/images/logo-nav-dark-transparent.png"
+              src="/images/logo-dark.png"
               alt="Bright Medical"
               className="h-10 w-auto mb-4"
             />

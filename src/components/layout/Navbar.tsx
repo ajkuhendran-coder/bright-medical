@@ -54,9 +54,9 @@ export default function Navbar() {
           {/* Logo */}
           <Link to="/" className="flex items-center no-underline">
             <img
-              src={scrolled ? '/images/logo-nav-light-transparent.png' : '/images/logo-nav-dark-transparent.png'}
+              src={scrolled ? '/images/logo-light.png' : '/images/logo-dark.png'}
               alt="Bright Medical"
-              className="h-14 sm:h-16 lg:h-18 w-auto object-contain py-1"
+              className="h-12 sm:h-14 lg:h-16 w-auto object-contain"
             />
           </Link>
 

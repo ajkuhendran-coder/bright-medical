@@ -49,43 +49,36 @@ export default function Hero() {
         <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-navy to-transparent" />
       </div>
 
-      {/* Mobile: Full background image with text overlay */}
-      <div className="lg:hidden relative min-h-screen flex items-end">
-        {/* Background photo */}
+      {/* Mobile: Background image with text on left, face visible on right */}
+      <div className="lg:hidden relative min-h-screen flex items-center">
+        {/* Background photo - face positioned to the right */}
         <div className="absolute inset-0">
-          <img src="/images/doctor-hero.webp" alt="" className="w-full h-full object-cover object-[center_15%]" />
-          <div className="absolute inset-0 bg-gradient-to-b from-navy/70 via-navy/50 via-30% to-navy/95" />
+          <img src="/images/doctor-hero.webp" alt="" className="w-full h-full object-cover object-[65%_15%]" />
+          {/* Gradient: strong on left for text readability, transparent on right for face */}
+          <div className="absolute inset-0 bg-gradient-to-r from-navy/95 via-navy/80 via-55% to-navy/30" />
+          {/* Top gradient for navbar area */}
+          <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-navy/80 to-transparent" />
         </div>
 
-        {/* Content overlay */}
-        <div className="relative z-10 px-6 pb-10 pt-28">
-          <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-1.5 mb-6">
-            <span className="text-teal text-xs font-medium">Gewicht</span>
-            <span className="text-white/30">|</span>
-            <span className="text-teal text-xs font-medium">Hormone</span>
-            <span className="text-white/30">|</span>
-            <span className="text-teal text-xs font-medium">Darm</span>
-            <span className="text-white/30">|</span>
-            <span className="text-teal text-xs font-medium">Longevity</span>
-          </div>
-
-          <h1 className="text-3xl sm:text-4xl font-bold text-white leading-tight mb-6">
+        {/* Content overlay - left-aligned, narrow width so face stays visible */}
+        <div className="relative z-10 px-5 py-28 max-w-[70%] sm:max-w-[60%]">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight mb-4">
             Endlich dauerhaft abnehmen —{' '}
             <span className="text-teal">ärztlich begleitet</span>, mit messbaren Ergebnissen.
           </h1>
 
-          <p className="text-sm sm:text-base text-white/80 leading-relaxed mb-3 font-[var(--font-body)]">
-            Stellen Sie sich vor, Sie wachen morgens auf und fühlen sich endlich wieder energiegeladen. Kein Jo-Jo. Kein nächster Versuch. Sondern ein Plan, der auf Ihrer Biologie basiert.
+          <p className="text-xs sm:text-sm text-white/80 leading-relaxed mb-3 font-[var(--font-body)]">
+            Coaching mit ärztlicher Expertise. Messbar. Strukturiert. Persönlich begleitet.
           </p>
-          <p className="text-xs text-white/50 mb-8 font-[var(--font-body)]">
+          <p className="text-[11px] text-white/50 mb-6 font-[var(--font-body)]">
             Bright Medical beginnt dort, wo die Kassenmedizin aufhört.
           </p>
 
           <div className="flex flex-col gap-3">
-            <button onClick={() => scrollTo('#kontakt')} className="bg-teal hover:bg-teal-dark text-white px-8 py-4 rounded-full text-base font-semibold transition-all cursor-pointer border-none shadow-xl shadow-teal/30">
+            <button onClick={() => scrollTo('#kontakt')} className="bg-teal hover:bg-teal-dark text-white px-6 py-3.5 rounded-full text-sm font-semibold transition-all cursor-pointer border-none shadow-xl shadow-teal/30">
               Kostenloses Erstgespräch sichern
             </button>
-            <button onClick={() => scrollTo('#programme')} className="border-2 border-white/30 text-white px-8 py-4 rounded-full text-base font-semibold transition-all cursor-pointer bg-transparent">
+            <button onClick={() => scrollTo('#programme')} className="border-2 border-white/30 text-white px-6 py-3.5 rounded-full text-sm font-semibold transition-all cursor-pointer bg-transparent">
               Programme ansehen
             </button>
           </div>
