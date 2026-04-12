@@ -10,17 +10,16 @@ export default async (req: Request, _context: Context) => {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 })
   }
 
-  // Netlify v2: env vars via Netlify.env.get()
-  const apiKey = Netlify.env.get('RESEND_API_KEY')
-  console.log('API key present:', !!apiKey, '| length:', apiKey?.length ?? 0)
-  console.log('All RESEND vars:', JSON.stringify(
-    Object.fromEntries(
-      Object.entries(Netlify.env.toObject()).filter(([k]) => k.includes('RESEND'))
-    )
-  ))
+  // Debug: log ALL available env var keys
+  const allEnv = Netlify.env.toObject()
+  const allKeys = Object.keys(allEnv)
+  console.log('=== ENV DEBUG ===')
+  console.log('Total env vars:', allKeys.length)
+  console.log('All keys:', JSON.stringify(allKeys))
 
+  const apiKey = Netlify.env.get('RESEND_API_KEY')
   if (!apiKey) {
-    console.error('RESEND_API_KEY not available')
+    console.error('RESEND_API_KEY not in env vars')
     return new Response(JSON.stringify({ error: 'Server-Konfigurationsfehler' }), { status: 500 })
   }
 
