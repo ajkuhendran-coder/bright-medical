@@ -44,9 +44,11 @@ export default function Navbar() {
   return (
     <nav
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled
-          ? 'bg-white/95 backdrop-blur-md shadow-lg'
-          : 'bg-transparent'
+        mobileOpen
+          ? 'bg-navy'
+          : scrolled
+            ? 'bg-white/95 backdrop-blur-md shadow-lg'
+            : 'bg-transparent'
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -54,7 +56,7 @@ export default function Navbar() {
           {/* Logo */}
           <Link to="/" className="flex items-center no-underline">
             <img
-              src={scrolled ? '/images/logo-light.png' : '/images/logo-dark.png'}
+              src={scrolled && !mobileOpen ? '/images/logo-light.png' : '/images/logo-dark.png'}
               alt="Bright Medical"
               className="h-8 sm:h-10 lg:h-12 w-auto object-contain"
             />
@@ -87,7 +89,7 @@ export default function Navbar() {
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
             className={`lg:hidden p-2 bg-transparent border-none cursor-pointer ${
-              scrolled ? 'text-navy' : 'text-white'
+              scrolled && !mobileOpen ? 'text-navy' : 'text-white'
             }`}
             aria-label="Menu"
           >
@@ -98,13 +100,13 @@ export default function Navbar() {
 
       {/* Mobile Menu */}
       {mobileOpen && (
-        <div className="lg:hidden fixed inset-0 top-20 bg-white z-40">
+        <div className="lg:hidden fixed inset-0 top-20 bg-navy z-40">
           <div className="flex flex-col items-center gap-6 pt-12">
             {navLinks.map((link) => (
               <button
                 key={link.href}
                 onClick={() => handleNavClick(link.href)}
-                className="text-lg font-medium text-navy hover:text-teal transition-colors bg-transparent border-none cursor-pointer"
+                className="text-lg font-medium text-white/90 hover:text-teal transition-colors bg-transparent border-none cursor-pointer"
               >
                 {link.label}
               </button>
