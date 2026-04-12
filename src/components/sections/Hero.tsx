@@ -52,7 +52,7 @@ export default function Hero() {
       {/* Mobile: Emergent-Technik — Bild fullscreen, Text links mit horizontalem Gradient */}
       <div className="lg:hidden relative min-h-screen">
         {/* Fullscreen Background Photo */}
-        <img src="/images/doctor-hero.webp" alt="" className="absolute inset-0 w-full h-full object-cover object-[center_top]" />
+        <img src="/images/doctor-hero.webp" alt="" className="absolute inset-0 w-full h-full object-cover object-[center_25%]" />
 
         {/* Horizontaler Gradient: Navy links (Text lesbar) → Transparent rechts (Gesicht sichtbar) */}
         <div className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgba(15,42,85,0.95) 0%, rgba(15,42,85,0.9) 30%, rgba(15,42,85,0.4) 40%, transparent 50%)' }} />
