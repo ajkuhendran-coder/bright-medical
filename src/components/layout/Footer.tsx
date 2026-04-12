@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { MapPin, Mail, Phone } from 'lucide-react'
+import { MapPin, Mail } from 'lucide-react'
 
 export default function Footer() {
   return (
@@ -26,10 +26,6 @@ export default function Footer() {
                 <a href="mailto:info@brightmedical.de" className="hover:text-teal transition-colors text-white/70 no-underline">
                   info@brightmedical.de
                 </a>
-              </div>
-              <div className="flex items-center gap-3 text-white/70 text-sm">
-                <Phone size={16} className="text-teal shrink-0" />
-                <span>Telefon auf Anfrage</span>
               </div>
             </div>
           </div>
