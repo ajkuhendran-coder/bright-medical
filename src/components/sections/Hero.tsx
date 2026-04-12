@@ -49,39 +49,40 @@ export default function Hero() {
         <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-navy to-transparent" />
       </div>
 
-      {/* Mobile: Background image with text on left, face visible on right */}
-      <div className="lg:hidden relative min-h-screen flex items-end">
-        {/* Background photo - face positioned to the right */}
-        <div className="absolute inset-0">
-          <img src="/images/doctor-hero.webp" alt="" className="w-full h-full object-cover object-[75%_15%]" />
-          {/* Gradient: strong on bottom-left for text, transparent on right for face */}
-          <div className="absolute inset-0 bg-gradient-to-t from-navy via-navy/70 via-40% to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-r from-navy/60 via-transparent via-40% to-transparent" />
-          {/* Top gradient for navbar area */}
-          <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-navy/60 to-transparent" />
-        </div>
+      {/* Mobile: Emergent-Technik — Bild fullscreen, Text links mit horizontalem Gradient */}
+      <div className="lg:hidden relative min-h-screen">
+        {/* Fullscreen Background Photo */}
+        <img src="/images/doctor-hero.webp" alt="" className="absolute inset-0 w-full h-full object-cover object-[center_top]" />
 
-        {/* Content overlay - bottom-aligned, full width, text doesn't overlap face */}
-        <div className="relative z-10 px-5 pb-20 pt-8 w-full">
-          <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight mb-3 max-w-[75%]">
-            Endlich dauerhaft abnehmen —{' '}
-            <span className="text-teal">ärztlich begleitet</span>.
-          </h1>
+        {/* Horizontaler Gradient: Navy links (Text lesbar) → Transparent rechts (Gesicht sichtbar) */}
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgba(15,42,85,0.95) 0%, rgba(15,42,85,0.9) 30%, rgba(15,42,85,0.4) 40%, transparent 50%)' }} />
 
-          <p className="text-xs sm:text-sm text-white/80 leading-relaxed mb-2 font-[var(--font-body)] max-w-[70%]">
-            Coaching mit ärztlicher Expertise. Messbar. Strukturiert. Persönlich begleitet.
-          </p>
-          <p className="text-[11px] text-white/50 mb-5 font-[var(--font-body)]">
-            Bright Medical beginnt dort, wo die Kassenmedizin aufhört.
-          </p>
+        {/* Top gradient for navbar area */}
+        <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-navy/60 to-transparent z-[1]" />
 
-          <div className="flex flex-col sm:flex-row gap-3">
-            <button onClick={() => scrollTo('#kontakt')} className="bg-teal hover:bg-teal-dark text-white px-6 py-3.5 rounded-full text-sm font-semibold transition-all cursor-pointer border-none shadow-xl shadow-teal/30">
-              Kostenloses Erstgespräch sichern
-            </button>
-            <button onClick={() => scrollTo('#programme')} className="border-2 border-white/30 text-white px-6 py-3.5 rounded-full text-sm font-semibold transition-all cursor-pointer bg-transparent">
-              Programme ansehen
-            </button>
+        {/* Text Overlay — links positioniert, padding-right drückt Text weg vom Gesicht */}
+        <div className="absolute inset-0 z-[2] flex items-center" style={{ paddingRight: '55%', paddingTop: '12vh' }}>
+          <div className="px-5 sm:px-8">
+            <h1 className="text-[clamp(1.4rem,5vw,1.8rem)] font-bold text-white leading-tight mb-3" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.4)' }}>
+              Endlich dauerhaft abnehmen —{' '}
+              <span className="text-teal">ärztlich begleitet</span>.
+            </h1>
+
+            <p className="text-xs sm:text-sm text-white/80 leading-relaxed mb-2 font-[var(--font-body)]" style={{ textShadow: '0 1px 4px rgba(0,0,0,0.3)' }}>
+              Coaching mit ärztlicher Expertise. Messbar. Strukturiert. Persönlich begleitet.
+            </p>
+            <p className="text-[11px] text-white/50 mb-5 font-[var(--font-body)]">
+              Bright Medical beginnt dort, wo die Kassenmedizin aufhört.
+            </p>
+
+            <div className="flex flex-col gap-3">
+              <button onClick={() => scrollTo('#kontakt')} className="bg-teal hover:bg-teal-dark text-white px-5 py-3 rounded-full text-sm font-semibold transition-all cursor-pointer border-none shadow-xl shadow-teal/30 w-fit">
+                Erstgespräch sichern
+              </button>
+              <button onClick={() => scrollTo('#programme')} className="border-2 border-white/30 text-white px-5 py-3 rounded-full text-sm font-semibold transition-all cursor-pointer bg-transparent w-fit">
+                Programme ansehen
+              </button>
+            </div>
           </div>
         </div>
       </div>
