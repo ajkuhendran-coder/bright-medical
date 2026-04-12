@@ -54,9 +54,9 @@ export default function Navbar() {
           {/* Logo */}
           <Link to="/" className="flex items-center no-underline">
             <img
-              src={scrolled ? '/images/logo-bright-medical.svg' : '/images/logo-bright-medical-white.svg'}
+              src={scrolled ? '/images/logo-nav-light-transparent.png' : '/images/logo-nav-dark-transparent.png'}
               alt="Bright Medical"
-              className="h-8 sm:h-9 lg:h-10 w-auto"
+              className="h-9 sm:h-10 lg:h-12 w-auto"
             />
           </Link>
 

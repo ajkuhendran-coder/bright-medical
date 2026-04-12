@@ -9,9 +9,9 @@ export default function Footer() {
           {/* Logo & Tagline */}
           <div>
             <img
-              src="/images/logo-bright-medical-white.svg"
+              src="/images/logo-nav-dark-transparent.png"
               alt="Bright Medical"
-              className="h-9 w-auto mb-4"
+              className="h-10 w-auto mb-4"
             />
             <p className="text-white/60 text-sm leading-relaxed">
               Ärztlich begleitet. Individuell optimiert.
