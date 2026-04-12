@@ -70,7 +70,15 @@ export default async (req: Request, _context: Context) => {
             <p>Hallo ${firstName},</p>
             <p>vielen Dank für Ihre Anfrage! Wir haben Ihre Nachricht erhalten und melden uns innerhalb von <strong>24 Stunden</strong> bei Ihnen.</p>
             <p>Falls Sie vorab Fragen haben, antworten Sie einfach auf diese E-Mail.</p>
-            <p>Herzliche Grüße,<br><strong>Ajanth Kuhendran</strong><br>Bright Medical</p>
+            <p>Herzliche Grüße,</p>
+            <p style="margin:0;">
+              <strong>Ajanth Kuhendran</strong><br>
+              <span style="color:#555;font-size:13px;">Facharzt für Allgemeinmedizin</span><br>
+              <span style="color:#555;font-size:13px;">Spezialist für funktionelle & integrative Medizin</span>
+            </p>
+            <p style="margin:16px 0 0;">
+              <img src="https://brightmedical.de/images/logo-light.png" alt="Bright Medical" style="height:36px;width:auto;" />
+            </p>
             <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;">
             <p style="color:#999;font-size:11px;">
               Coaching-Dienstleistung im zweiten Gesundheitsmarkt. Keine Kassenleistung.<br>
