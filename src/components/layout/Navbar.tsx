@@ -56,7 +56,7 @@ export default function Navbar() {
             <img
               src={scrolled ? '/images/logo-nav-light-transparent.png' : '/images/logo-nav-dark-transparent.png'}
               alt="Bright Medical"
-              className="h-12 lg:h-14 w-auto"
+              className="h-10 sm:h-12 lg:h-14 w-auto max-w-[180px] sm:max-w-[220px] lg:max-w-none"
             />
           </Link>
 

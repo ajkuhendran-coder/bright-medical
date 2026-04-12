@@ -6,10 +6,10 @@ export default function Hero() {
   }
 
   return (
-    <section id="hero" className="relative min-h-screen flex items-stretch overflow-hidden">
+    <section id="hero" className="relative min-h-screen flex flex-col lg:flex-row items-stretch overflow-hidden">
       {/* Left side - Navy with text */}
-      <div className="relative z-10 bg-navy w-full lg:w-1/2 flex items-center">
-        <div className="px-6 sm:px-10 lg:px-16 xl:px-20 py-32 lg:py-0 max-w-2xl">
+      <div className="relative z-10 bg-navy w-full lg:w-1/2 flex items-center order-2 lg:order-1">
+        <div className="px-6 sm:px-10 lg:px-16 xl:px-20 py-12 lg:py-0 max-w-2xl">
           {/* Small Tag */}
           <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-1.5 mb-8">
             <span className="text-teal text-sm font-medium">Gewicht</span>
@@ -22,7 +22,7 @@ export default function Hero() {
           </div>
 
           {/* Headline */}
-          <h1 className="text-4xl sm:text-5xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight mb-6">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-white leading-tight mb-6">
             Endlich dauerhaft abnehmen —{' '}
             <span className="text-teal">ärztlich begleitet</span>, mit messbaren Ergebnissen.
           </h1>
@@ -53,20 +53,17 @@ export default function Hero() {
         </div>
       </div>
 
-      {/* Right side - Doctor photo */}
-      <div className="hidden lg:block lg:w-1/2 relative">
+      {/* Right side / Top on mobile - Doctor photo */}
+      <div className="w-full lg:w-1/2 relative order-1 lg:order-2 h-[50vh] sm:h-[60vh] lg:h-auto">
         <img
           src="/images/doctor-hero.png"
           alt="Dr. med. Ajanth Kuhendran"
-          className="w-full h-full object-cover object-[center_20%]"
+          className="w-full h-full object-cover object-[center_15%]"
         />
-        {/* Subtle gradient overlay on left edge for smooth transition */}
-        <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-navy to-transparent" />
-      </div>
-
-      {/* Mobile: Background image behind the navy content */}
-      <div className="lg:hidden absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-navy" />
+        {/* Gradient overlay on bottom edge (mobile) for smooth transition to navy */}
+        <div className="lg:hidden absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-navy to-transparent" />
+        {/* Gradient overlay on left edge (desktop) for smooth transition */}
+        <div className="hidden lg:block absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-navy to-transparent" />
       </div>
 
       {/* Scroll Indicator */}
