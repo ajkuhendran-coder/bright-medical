@@ -12,14 +12,15 @@ export default function Hero() {
         <img
           src="/images/doctor-hero.png"
           alt=""
-          className="w-full h-full object-cover object-top"
+          className="w-full h-full object-cover object-[center_20%] lg:object-[70%_20%]"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-navy/90 via-navy/80 to-navy/60" />
+        <div className="absolute inset-0 bg-gradient-to-r from-navy/95 via-navy/85 via-50% to-navy/30" />
+        <div className="absolute inset-0 bg-gradient-to-b from-navy/40 via-transparent to-navy/60 lg:hidden" />
       </div>
 
       {/* Content */}
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32 lg:py-0">
-        <div className="max-w-3xl">
+        <div className="max-w-2xl">
           {/* Small Tag */}
           <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-4 py-1.5 mb-8">
             <span className="text-teal text-sm font-medium">Gewicht</span>
