@@ -50,13 +50,13 @@ export default function Navbar() {
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 lg:h-20">
+        <div className="flex items-center justify-between h-20 lg:h-24">
           {/* Logo */}
           <Link to="/" className="flex items-center no-underline">
             <img
               src={scrolled ? '/images/logo-nav-light-transparent.png' : '/images/logo-nav-dark-transparent.png'}
               alt="Bright Medical"
-              className="h-9 sm:h-10 lg:h-12 w-auto"
+              className="h-14 sm:h-16 lg:h-18 w-auto object-contain py-1"
             />
           </Link>
 
@@ -98,7 +98,7 @@ export default function Navbar() {
 
       {/* Mobile Menu */}
       {mobileOpen && (
-        <div className="lg:hidden fixed inset-0 top-16 bg-white z-40">
+        <div className="lg:hidden fixed inset-0 top-20 bg-white z-40">
           <div className="flex flex-col items-center gap-6 pt-12">
             {navLinks.map((link) => (
               <button
