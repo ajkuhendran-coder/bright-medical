@@ -46,20 +46,18 @@ export default function Contact() {
 
   if (formState === 'success') {
     return (
-      <section id="kontakt" className="py-20 lg:py-28 bg-navy" ref={ref}>
+      <section id="kontakt" className="py-20 lg:py-28 bg-navy">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="animate-on-scroll">
-            <CheckCircle size={64} className="text-teal mx-auto mb-6" />
-            <h2 className="text-3xl font-bold text-white mb-4">
-              Vielen Dank für Ihre Anfrage!
-            </h2>
-            <p className="text-white/70 mb-4">
-              Wir haben Ihre Nachricht erhalten und melden uns innerhalb von 24 Stunden bei Ihnen.
-            </p>
-            <p className="text-white/50 text-sm">
-              Sie erhalten in Kürze eine Bestätigungsemail mit weiteren Informationen.
-            </p>
-          </div>
+          <CheckCircle size={64} className="text-teal mx-auto mb-6" />
+          <h2 className="text-3xl font-bold text-white mb-4">
+            Vielen Dank für Ihre Anfrage!
+          </h2>
+          <p className="text-white/70 mb-4">
+            Wir haben Ihre Nachricht erhalten und melden uns innerhalb von 24 Stunden bei Ihnen.
+          </p>
+          <p className="text-white/50 text-sm">
+            Sie erhalten in Kürze eine Bestätigungsemail mit weiteren Informationen.
+          </p>
         </div>
       </section>
     )
