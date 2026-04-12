@@ -82,23 +82,23 @@ export default function Contact() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="block text-sm font-medium text-navy mb-1.5">Name *</label>
-              <input type="text" name="name" value={formData.name} onChange={handleChange} required className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm" placeholder="Vor- und Nachname" />
+              <label htmlFor="contact-name" className="block text-sm font-medium text-navy mb-1.5">Name *</label>
+              <input id="contact-name" type="text" name="name" value={formData.name} onChange={handleChange} required className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm" placeholder="Vor- und Nachname" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-navy mb-1.5">E-Mail *</label>
-              <input type="email" name="email" value={formData.email} onChange={handleChange} required className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm" placeholder="ihre@email.de" />
+              <label htmlFor="contact-email" className="block text-sm font-medium text-navy mb-1.5">E-Mail *</label>
+              <input id="contact-email" type="email" name="email" value={formData.email} onChange={handleChange} required className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm" placeholder="ihre@email.de" />
             </div>
           </div>
 
           <div className="mb-4">
-            <label className="block text-sm font-medium text-navy mb-1.5">Telefon (optional)</label>
-            <input type="tel" name="phone" value={formData.phone} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm" placeholder="+49 ..." />
+            <label htmlFor="contact-phone" className="block text-sm font-medium text-navy mb-1.5">Telefon (optional)</label>
+            <input id="contact-phone" type="tel" name="phone" value={formData.phone} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm" placeholder="+49 ..." />
           </div>
 
           <div className="mb-6">
-            <label className="block text-sm font-medium text-navy mb-1.5">Was beschäftigt Sie gerade? *</label>
-            <textarea name="message" value={formData.message} onChange={handleChange} required rows={4} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm resize-none" placeholder="Beschreiben Sie kurz Ihre Situation — Gewicht, Energie, Hormone, oder etwas anderes..." />
+            <label htmlFor="contact-message" className="block text-sm font-medium text-navy mb-1.5">Was beschäftigt Sie gerade? *</label>
+            <textarea id="contact-message" name="message" value={formData.message} onChange={handleChange} required rows={4} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm resize-none" placeholder="Beschreiben Sie kurz Ihre Situation — Gewicht, Energie, Hormone, oder etwas anderes..." />
           </div>
 
           <div className="mb-6">

@@ -17,15 +17,19 @@ export default function FAQ() {
           </h2>
         </div>
 
-        <div className="animate-on-scroll space-y-3">
+        <div className="animate-on-scroll space-y-3" role="list">
           {faqs.map((faq, i) => (
             <div
               key={i}
               className="border border-gray-200 rounded-xl overflow-hidden"
+              role="listitem"
             >
               <button
                 onClick={() => setOpenIndex(openIndex === i ? null : i)}
                 className="w-full flex items-center justify-between p-5 text-left bg-white hover:bg-slate-light transition-colors cursor-pointer border-none"
+                aria-expanded={openIndex === i}
+                aria-controls={`faq-answer-${i}`}
+                id={`faq-question-${i}`}
               >
                 <span className="font-semibold text-navy pr-4">{faq.question}</span>
                 <ChevronDown
@@ -36,6 +40,9 @@ export default function FAQ() {
                 />
               </button>
               <div
+                id={`faq-answer-${i}`}
+                role="region"
+                aria-labelledby={`faq-question-${i}`}
                 className={`overflow-hidden transition-all duration-300 ${
                   openIndex === i ? 'max-h-96' : 'max-h-0'
                 }`}

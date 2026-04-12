@@ -21,7 +21,7 @@ export default function Hero() {
           </div>
 
           <h1 className="text-5xl xl:text-6xl font-bold text-white leading-tight mb-6">
-            Endlich dauerhaft abnehmen —{' '}
+            Gesundheit, die Sie spüren —{' '}
             <span className="text-teal">ärztlich begleitet</span>, mit messbaren Ergebnissen.
           </h1>
 
@@ -64,7 +64,7 @@ export default function Hero() {
         <div className="absolute inset-0 z-[2] flex items-center" style={{ paddingRight: '55%', paddingTop: '12vh' }}>
           <div className="px-5 sm:px-8">
             <h1 className="text-[clamp(1.4rem,5vw,1.8rem)] font-bold text-white leading-tight mb-3" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.4)' }}>
-              Endlich dauerhaft abnehmen —{' '}
+              Gesundheit, die Sie spüren —{' '}
               <span className="text-teal">ärztlich begleitet</span>.
             </h1>
 

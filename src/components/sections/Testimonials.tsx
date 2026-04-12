@@ -38,6 +38,16 @@ export default function Testimonials() {
             </div>
           ))}
         </div>
+
+        {/* CTA after social proof */}
+        <div className="animate-on-scroll text-center mt-12">
+          <button
+            onClick={() => document.querySelector('#kontakt')?.scrollIntoView({ behavior: 'smooth' })}
+            className="bg-teal hover:bg-teal-dark text-white px-8 py-4 rounded-full text-base font-semibold transition-all cursor-pointer border-none shadow-lg shadow-teal/25"
+          >
+            Auch Ihre Veränderung beginnt hier
+          </button>
+        </div>
       </div>
     </section>
   )
