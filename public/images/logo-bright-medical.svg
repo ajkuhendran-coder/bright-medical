@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 50" fill="none">
+  <!-- Teal arc sweeping from lower-left to upper-right -->
+  <path d="M8 32 C8 14, 22 4, 38 4" stroke="#06B6D4" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+  <!-- Teal dot at top of arc -->
+  <circle cx="40" cy="3" r="3.2" fill="#06B6D4"/>
+  <!-- B letter -->
+  <text x="10" y="42" font-family="'Arial Black', 'Helvetica Neue', Arial, sans-serif" font-weight="900" font-size="32" fill="#0F2A55" letter-spacing="-1">B</text>
+  <!-- M letter slightly offset -->
+  <text x="30" y="42" font-family="'Arial Black', 'Helvetica Neue', Arial, sans-serif" font-weight="900" font-size="32" fill="#0F2A55" letter-spacing="-1">M</text>
+  <!-- "Bright" text -->
+  <text x="68" y="36" font-family="'Helvetica Neue', Arial, sans-serif" font-weight="700" font-size="26" fill="#0F2A55" letter-spacing="0.5">Bright</text>
+  <!-- "Medical" text in teal -->
+  <text x="158" y="36" font-family="'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="26" fill="#0F2A55" letter-spacing="0.5">Medical</text>
+</svg>

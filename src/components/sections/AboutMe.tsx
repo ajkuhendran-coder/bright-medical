@@ -20,7 +20,7 @@ export default function AboutMe() {
             <div className="relative">
               <div className="absolute -inset-4 bg-teal/10 rounded-3xl -rotate-3" />
               <img
-                src="/images/doctor-coat.png"
+                src="/images/doctor-tablet.webp"
                 alt="Dr. med. Ajanth Kuhendran"
                 className="relative rounded-2xl w-full max-w-md mx-auto lg:mx-0 shadow-2xl"
                 loading="lazy"

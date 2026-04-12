@@ -45,7 +45,7 @@ export default function Hero() {
 
       {/* Desktop: Right side - Doctor photo */}
       <div className="hidden lg:block lg:w-1/2 relative">
-        <img src="/images/doctor-hero.png" alt="Dr. med. Ajanth Kuhendran" className="w-full h-full object-cover object-[center_15%]" />
+        <img src="/images/doctor-hero.webp" alt="Dr. med. Ajanth Kuhendran" className="w-full h-full object-cover object-[center_15%]" />
         <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-navy to-transparent" />
       </div>
 
@@ -53,7 +53,7 @@ export default function Hero() {
       <div className="lg:hidden relative min-h-screen flex items-end">
         {/* Background photo */}
         <div className="absolute inset-0">
-          <img src="/images/doctor-hero.png" alt="" className="w-full h-full object-cover object-[center_15%]" />
+          <img src="/images/doctor-hero.webp" alt="" className="w-full h-full object-cover object-[center_15%]" />
           <div className="absolute inset-0 bg-gradient-to-b from-navy/70 via-navy/50 via-30% to-navy/95" />
         </div>
 
@@ -69,7 +69,7 @@ export default function Hero() {
             <span className="text-teal text-xs font-medium">Longevity</span>
           </div>
 
-          <h1 className="text-3xl sm:text-4xl font-bold text-white leading-tight mb-5">
+          <h1 className="text-3xl sm:text-4xl font-bold text-white leading-tight mb-6">
             Endlich dauerhaft abnehmen —{' '}
             <span className="text-teal">ärztlich begleitet</span>, mit messbaren Ergebnissen.
           </h1>

@@ -5,6 +5,7 @@ import Approach from '../components/sections/Approach'
 import Testimonials from '../components/sections/Testimonials'
 import Programs from '../components/sections/Programs'
 import Comparison from '../components/sections/Comparison'
+import Urgency from '../components/sections/Urgency'
 import Timeline from '../components/sections/Timeline'
 import Metrics from '../components/sections/Metrics'
 import AboutMe from '../components/sections/AboutMe'
@@ -22,6 +23,7 @@ export default function Home() {
       <Testimonials />
       <Programs />
       <Comparison />
+      <Urgency />
       <Timeline />
       <Metrics />
       <AboutMe />
