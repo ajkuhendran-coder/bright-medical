@@ -33,7 +33,14 @@ export default function Contact() {
     setFormState('submitting')
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      const response = await fetch('/.netlify/functions/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      })
+
+      if (!response.ok) throw new Error('Fehler beim Senden')
+
       setFormState('success')
       setFormData({ firstName: '', lastName: '', email: '', phone: '', subject: '', situation: '', tried: '', message: '', privacy: false, honeypot: '' })
     } catch {
