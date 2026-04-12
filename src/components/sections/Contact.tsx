@@ -105,7 +105,11 @@ export default function Contact() {
             <label className="flex items-start gap-3 cursor-pointer">
               <input type="checkbox" name="privacy" checked={formData.privacy} onChange={handleChange} required className="mt-0.5 w-5 h-5 rounded border-gray-300 text-teal focus:ring-teal" />
               <span className="text-xs text-slate-body/60 leading-relaxed">
-                Ich habe die Datenschutzerklärung gelesen und bin mit der Verarbeitung meiner Daten
+                Ich habe die{' '}
+                <a href="/datenschutz" target="_blank" rel="noopener noreferrer" className="text-teal underline hover:text-teal-dark">
+                  Datenschutzerklärung
+                </a>{' '}
+                gelesen und bin mit der Verarbeitung meiner Daten
                 zur Beantwortung meiner Anfrage einverstanden. *
               </span>
             </label>

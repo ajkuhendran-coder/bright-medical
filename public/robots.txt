@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://bright-medical.de/sitemap.xml
+Sitemap: https://brightmedical.de/sitemap.xml

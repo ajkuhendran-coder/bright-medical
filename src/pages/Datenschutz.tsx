@@ -130,43 +130,14 @@ export default function Datenschutz() {
             </p>
           </div>
 
-          {/* 8. Google Fonts */}
+          {/* 8. Schriftarten */}
           <div>
-            <h2 className="text-xl font-bold text-navy mb-2">8. Google Fonts</h2>
+            <h2 className="text-xl font-bold text-navy mb-2">8. Schriftarten</h2>
             <p className="text-slate-body/80 leading-relaxed">
-              Diese Website nutzt zur einheitlichen Darstellung von Schriftarten sogenannte Google Fonts,
-              die von Google LLC, 1600 Amphitheatre Parkway, Mountain View, CA 94043, USA, bereitgestellt
-              werden. Beim Aufruf einer Seite l&auml;dt Ihr Browser die ben&ouml;tigten Schriftarten
-              in Ihren Browsercache, um Texte und Schriftarten korrekt anzuzeigen. Zu diesem Zweck muss
-              der von Ihnen verwendete Browser Verbindung zu den Servern von Google aufnehmen. Hierdurch
-              erlangt Google Kenntnis dar&uuml;ber, dass &uuml;ber Ihre IP-Adresse unsere Website
-              aufgerufen wurde.
-            </p>
-            <p className="text-slate-body/80 leading-relaxed mt-2">
-              Die Nutzung von Google Fonts erfolgt auf Grundlage von Art. 6 Abs. 1 lit. f DSGVO. Wir
-              haben ein berechtigtes Interesse an der einheitlichen Darstellung des Schriftbildes auf
-              unserer Website. Sofern eine entsprechende Einwilligung abgefragt wurde, erfolgt die
-              Verarbeitung ausschlie&szlig;lich auf Grundlage von Art. 6 Abs. 1 lit. a DSGVO.
-            </p>
-            <p className="text-slate-body/80 leading-relaxed mt-2">
-              Weitere Informationen zu Google Fonts finden Sie unter{' '}
-              <a
-                href="https://developers.google.com/fonts/faq"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-bright-coral underline"
-              >
-                https://developers.google.com/fonts/faq
-              </a>{' '}
-              und in der Datenschutzerkl&auml;rung von Google:{' '}
-              <a
-                href="https://policies.google.com/privacy"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-bright-coral underline"
-              >
-                https://policies.google.com/privacy
-              </a>.
+              Diese Website nutzt zur einheitlichen Darstellung von Schriftarten lokal gehostete
+              Schriftarten (Google Fonts). Die Schriftarten-Dateien werden direkt von unserem Server
+              ausgeliefert. Es findet <strong>keine Verbindung zu Servern von Google</strong> statt.
+              Ihre IP-Adresse wird nicht an Google &uuml;bermittelt.
             </p>
           </div>
 
@@ -235,7 +206,7 @@ export default function Datenschutz() {
                 href="https://www.baden-wuerttemberg.datenschutz.de"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-bright-coral underline"
+                className="text-teal underline"
               >
                 www.baden-wuerttemberg.datenschutz.de
               </a>

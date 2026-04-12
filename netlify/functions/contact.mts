@@ -4,10 +4,66 @@ import type { Context } from '@netlify/functions'
 const ADMIN_EMAIL = 'info@brightmedical.de'
 const FROM_EMAIL = 'Bright Medical <noreply@brightmedical.de>'
 
+// --- XSS Protection ---
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+// --- Rate Limiting (in-memory, resets on cold start) ---
+const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000 // 10 minutes
+const RATE_LIMIT_MAX = 5
+const rateLimitMap = new Map<string, { count: number; firstRequest: number }>()
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now()
+  const entry = rateLimitMap.get(ip)
+
+  if (!entry || now - entry.firstRequest > RATE_LIMIT_WINDOW_MS) {
+    rateLimitMap.set(ip, { count: 1, firstRequest: now })
+    return false
+  }
+
+  entry.count++
+  return entry.count > RATE_LIMIT_MAX
+}
+
+// --- CORS Origin Check ---
+const ALLOWED_ORIGINS = [
+  'https://brightmedical.de',
+  'https://www.brightmedical.de',
+  'http://localhost',
+]
+
+function isAllowedOrigin(origin: string | null): boolean {
+  if (!origin) return false
+  return ALLOWED_ORIGINS.some(
+    (allowed) => origin === allowed || origin.startsWith(allowed + ':')
+  )
+}
+
+// --- Input Length Limits ---
+const MAX_LENGTHS = {
+  name: 200,
+  email: 254,
+  phone: 50,
+  message: 5000,
+} as const
+
 export default async (req: Request, _context: Context) => {
   // Only allow POST
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 })
+  }
+
+  // CORS origin check
+  const origin = req.headers.get('origin')
+  if (!isAllowedOrigin(origin)) {
+    return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403 })
   }
 
   const apiKey = Netlify.env.get('RESEND_API_KEY')
@@ -16,7 +72,15 @@ export default async (req: Request, _context: Context) => {
   }
 
   const resend = new Resend(apiKey)
-  const ip = req.headers.get('x-forwarded-for') || req.headers.get('client-ip') || 'unknown'
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('client-ip') || 'unknown'
+
+  // Rate limiting
+  if (isRateLimited(ip)) {
+    return new Response(
+      JSON.stringify({ error: 'Zu viele Anfragen. Bitte versuchen Sie es später erneut.' }),
+      { status: 429 }
+    )
+  }
 
   try {
     const data = await req.json()
@@ -28,8 +92,22 @@ export default async (req: Request, _context: Context) => {
 
     // Validate required fields
     const { name, email, message } = data
+    const phone = data.phone || ''
     if (!name || !email || !message) {
       return new Response(JSON.stringify({ error: 'Pflichtfelder fehlen' }), { status: 400 })
+    }
+
+    // Input length validation
+    if (
+      typeof name !== 'string' || name.length > MAX_LENGTHS.name ||
+      typeof email !== 'string' || email.length > MAX_LENGTHS.email ||
+      typeof message !== 'string' || message.length > MAX_LENGTHS.message ||
+      (phone && (typeof phone !== 'string' || phone.length > MAX_LENGTHS.phone))
+    ) {
+      return new Response(
+        JSON.stringify({ error: 'Eingabe überschreitet die maximal zulässige Länge.' }),
+        { status: 400 }
+      )
     }
 
     // Email validation
@@ -37,25 +115,31 @@ export default async (req: Request, _context: Context) => {
       return new Response(JSON.stringify({ error: 'Ungültige E-Mail-Adresse' }), { status: 400 })
     }
 
+    // Escape all user inputs for safe HTML embedding
+    const safeName = escapeHtml(name)
+    const safeEmail = escapeHtml(email)
+    const safePhone = escapeHtml(phone || '—')
+    const safeMessage = escapeHtml(message)
+    const safeFirstName = escapeHtml(name.split(' ')[0])
+
     // 1. Send admin notification
     await resend.emails.send({
       from: FROM_EMAIL,
       to: ADMIN_EMAIL,
-      subject: `Neue Anfrage — ${name}`,
+      subject: `Neue Anfrage — ${safeName}`,
       html: `
         <h2>Neue Coaching-Anfrage über brightmedical.de</h2>
         <table style="border-collapse:collapse;width:100%;max-width:600px;">
-          <tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:bold;">Name</td><td style="padding:8px;border-bottom:1px solid #eee;">${name}</td></tr>
-          <tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:bold;">E-Mail</td><td style="padding:8px;border-bottom:1px solid #eee;"><a href="mailto:${email}">${email}</a></td></tr>
-          <tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:bold;">Telefon</td><td style="padding:8px;border-bottom:1px solid #eee;">${data.phone || '—'}</td></tr>
-          <tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:bold;">Nachricht</td><td style="padding:8px;border-bottom:1px solid #eee;">${message}</td></tr>
+          <tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:bold;">Name</td><td style="padding:8px;border-bottom:1px solid #eee;">${safeName}</td></tr>
+          <tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:bold;">E-Mail</td><td style="padding:8px;border-bottom:1px solid #eee;"><a href="mailto:${safeEmail}">${safeEmail}</a></td></tr>
+          <tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:bold;">Telefon</td><td style="padding:8px;border-bottom:1px solid #eee;">${safePhone}</td></tr>
+          <tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:bold;">Nachricht</td><td style="padding:8px;border-bottom:1px solid #eee;">${safeMessage}</td></tr>
         </table>
-        <p style="color:#999;font-size:12px;margin-top:20px;">Gesendet von brightmedical.de · IP: ${ip}</p>
+        <p style="color:#999;font-size:12px;margin-top:20px;">Gesendet von brightmedical.de · IP: ${escapeHtml(ip)}</p>
       `,
     })
 
     // 2. Send confirmation to prospect
-    const firstName = name.split(' ')[0]
     await resend.emails.send({
       from: FROM_EMAIL,
       replyTo: ADMIN_EMAIL,
@@ -68,14 +152,14 @@ export default async (req: Request, _context: Context) => {
             <p style="color:#06B6D4;margin:5px 0 0;font-size:14px;">Ärztlich begleitet. Individuell optimiert.</p>
           </div>
           <div style="padding:30px;background:#f8fafc;border-radius:0 0 12px 12px;">
-            <p>Hallo ${firstName},</p>
+            <p>Hallo ${safeFirstName},</p>
             <p>vielen Dank für Ihre Anfrage! Wir haben Ihre Nachricht erhalten und melden uns innerhalb von <strong>24 Stunden</strong> bei Ihnen.</p>
             <p>Falls Sie vorab Fragen haben, antworten Sie einfach auf diese E-Mail.</p>
             <p>Herzliche Grüße,</p>
             <p style="margin:0;">
               <strong>Ajanth Kuhendran</strong><br>
               <span style="color:#555;font-size:13px;">Facharzt für Allgemeinmedizin</span><br>
-              <span style="color:#555;font-size:13px;">Spezialist für funktionelle & integrative Medizin</span>
+              <span style="color:#555;font-size:13px;">Spezialist für funktionelle &amp; integrative Medizin</span>
             </p>
             <p style="margin:16px 0 0;">
               <img src="https://brightmedical.de/images/logo-light.png" alt="Bright Medical" style="height:36px;width:auto;" />

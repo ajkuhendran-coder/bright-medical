@@ -51,7 +51,7 @@ export default function Impressum() {
                 href="https://www.aerztekammer-bw.de"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-bright-coral underline"
+                className="text-teal underline"
               >
                 www.aerztekammer-bw.de
               </a>
@@ -90,7 +90,7 @@ export default function Impressum() {
                 href="https://ec.europa.eu/consumers/odr/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-bright-coral underline"
+                className="text-teal underline"
               >
                 https://ec.europa.eu/consumers/odr/
               </a>
