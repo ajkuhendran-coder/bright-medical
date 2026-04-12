@@ -11,11 +11,17 @@ const handler: Handler = async (event) => {
   }
 
   // Init Resend inside handler to avoid crash if env var is missing
+  // Debug: log all available env var keys (not values) to diagnose missing vars
+  const allKeys = Object.keys(process.env)
+  console.log('Total env vars:', allKeys.length, '| Sample keys:', allKeys.slice(0, 10))
+  console.log('RESEND keys:', allKeys.filter(k => k.includes('RESEND')))
+
   const apiKey = process.env.RESEND_API_KEY
   if (!apiKey) {
-    console.error('RESEND_API_KEY not set. Available env vars:', Object.keys(process.env).filter(k => k.includes('RESEND')))
+    console.error('RESEND_API_KEY not set')
     return { statusCode: 500, body: JSON.stringify({ error: 'Server-Konfigurationsfehler' }) }
   }
+  console.log('RESEND_API_KEY found, length:', apiKey.length)
   const resend = new Resend(apiKey)
 
   // Rate limiting headers check
