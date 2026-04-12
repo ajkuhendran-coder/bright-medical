@@ -15,7 +15,7 @@ export default function Impressum() {
             <h2 className="text-xl font-bold text-navy mb-2">Angaben gem&auml;&szlig; &sect; 5 TMG</h2>
             <p className="text-slate-body/80 leading-relaxed">
               Bright Medical<br />
-              Inhaber: Dr. med. Ajanth Kuhendran<br />
+              Inhaber: Ajanth Kuhendran<br />
               Am Alten G&uuml;terbahnhof 24<br />
               76646 Bruchsal
             </p>

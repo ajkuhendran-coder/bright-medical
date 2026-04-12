@@ -45,7 +45,7 @@ export default function Hero() {
 
       {/* Desktop: Right side - Doctor photo */}
       <div className="hidden lg:block lg:w-1/2 relative">
-        <img src="/images/doctor-hero.webp" alt="Dr. med. Ajanth Kuhendran" className="w-full h-full object-cover object-[center_15%]" />
+        <img src="/images/doctor-hero.webp" alt="Ajanth Kuhendran" className="w-full h-full object-cover object-[center_15%]" />
         <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-navy to-transparent" />
       </div>
 

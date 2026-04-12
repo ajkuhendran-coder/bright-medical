@@ -24,8 +24,8 @@ const handler: Handler = async (event) => {
     }
 
     // Validate required fields
-    const { firstName, lastName, email, subject, situation } = data
-    if (!firstName || !lastName || !email || !subject || !situation) {
+    const { name, email, message } = data
+    if (!name || !email || !message) {
       return { statusCode: 400, body: JSON.stringify({ error: 'Pflichtfelder fehlen' }) }
     }
 
@@ -38,23 +38,21 @@ const handler: Handler = async (event) => {
     await resend.emails.send({
       from: FROM_EMAIL,
       to: ADMIN_EMAIL,
-      subject: `Neue Anfrage: ${subject} — ${firstName} ${lastName}`,
+      subject: `Neue Anfrage — ${name}`,
       html: `
         <h2>Neue Coaching-Anfrage über brightmedical.de</h2>
         <table style="border-collapse:collapse;width:100%;max-width:600px;">
-          <tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:bold;">Name</td><td style="padding:8px;border-bottom:1px solid #eee;">${firstName} ${lastName}</td></tr>
+          <tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:bold;">Name</td><td style="padding:8px;border-bottom:1px solid #eee;">${name}</td></tr>
           <tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:bold;">E-Mail</td><td style="padding:8px;border-bottom:1px solid #eee;"><a href="mailto:${email}">${email}</a></td></tr>
           <tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:bold;">Telefon</td><td style="padding:8px;border-bottom:1px solid #eee;">${data.phone || '—'}</td></tr>
-          <tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:bold;">Thema</td><td style="padding:8px;border-bottom:1px solid #eee;">${subject}</td></tr>
-          <tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:bold;">Situation</td><td style="padding:8px;border-bottom:1px solid #eee;">${situation}</td></tr>
-          <tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:bold;">Bisher versucht</td><td style="padding:8px;border-bottom:1px solid #eee;">${data.tried || '—'}</td></tr>
-          <tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:bold;">Nachricht</td><td style="padding:8px;border-bottom:1px solid #eee;">${data.message || '—'}</td></tr>
+          <tr><td style="padding:8px;border-bottom:1px solid #eee;font-weight:bold;">Nachricht</td><td style="padding:8px;border-bottom:1px solid #eee;">${message}</td></tr>
         </table>
         <p style="color:#999;font-size:12px;margin-top:20px;">Gesendet von brightmedical.de · IP: ${ip}</p>
       `,
     })
 
     // 2. Send confirmation to prospect
+    const firstName = name.split(' ')[0]
     await resend.emails.send({
       from: FROM_EMAIL,
       to: email,
@@ -68,13 +66,8 @@ const handler: Handler = async (event) => {
           <div style="padding:30px;background:#f8fafc;border-radius:0 0 12px 12px;">
             <p>Hallo ${firstName},</p>
             <p>vielen Dank für Ihre Anfrage! Wir haben Ihre Nachricht erhalten und melden uns innerhalb von <strong>24 Stunden</strong> bei Ihnen.</p>
-            <p><strong>Ihre Angaben:</strong></p>
-            <ul style="color:#555;">
-              <li>Thema: ${subject}</li>
-              <li>Situation: ${situation.substring(0, 100)}${situation.length > 100 ? '...' : ''}</li>
-            </ul>
             <p>Falls Sie vorab Fragen haben, antworten Sie einfach auf diese E-Mail.</p>
-            <p>Herzliche Grüße,<br><strong>Dr. med. Ajanth Kuhendran</strong><br>Bright Medical</p>
+            <p>Herzliche Grüße,<br><strong>Ajanth Kuhendran</strong><br>Bright Medical</p>
             <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;">
             <p style="color:#999;font-size:11px;">
               Coaching-Dienstleistung im zweiten Gesundheitsmarkt. Keine Kassenleistung.<br>

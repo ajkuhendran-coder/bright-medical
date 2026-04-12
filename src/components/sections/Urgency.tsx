@@ -11,7 +11,7 @@ export default function Urgency() {
           <div className="flex items-center gap-3">
             <Users size={24} className="text-white shrink-0" />
             <p className="text-white font-semibold text-base sm:text-lg">
-              Nur begrenzte Plätze pro Quartal
+              Nur 8 neue Plätze pro Quartal
             </p>
           </div>
           <div className="hidden sm:block w-px h-8 bg-white/30" />

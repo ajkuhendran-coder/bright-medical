@@ -19,7 +19,7 @@ export default function Datenschutz() {
             </p>
             <p className="text-slate-body/80 leading-relaxed mt-2">
               Bright Medical<br />
-              Inhaber: Dr. med. Ajanth Kuhendran<br />
+              Inhaber: Ajanth Kuhendran<br />
               Am Alten G&uuml;terbahnhof 24<br />
               76646 Bruchsal<br />
               E-Mail: info@bright-medical.de

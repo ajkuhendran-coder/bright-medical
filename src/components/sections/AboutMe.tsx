@@ -21,7 +21,7 @@ export default function AboutMe() {
               <div className="absolute -inset-4 bg-teal/10 rounded-3xl -rotate-3" />
               <img
                 src="/images/doctor-tablet.webp"
-                alt="Dr. med. Ajanth Kuhendran"
+                alt="Ajanth Kuhendran"
                 className="relative rounded-2xl w-full max-w-md mx-auto lg:mx-0 shadow-2xl"
                 loading="lazy"
               />
@@ -32,7 +32,7 @@ export default function AboutMe() {
           <div className="animate-on-scroll" style={{ transitionDelay: '200ms' }}>
             <span className="text-teal text-sm font-semibold tracking-wider uppercase">Ihr Arzt & Coach</span>
             <h2 className="text-3xl sm:text-4xl font-bold text-navy mt-4 mb-6">
-              Dr. med. Ajanth Kuhendran
+              Ajanth Kuhendran
             </h2>
             <p className="text-lg text-slate-body/60 mb-2">
               Facharzt für Allgemeinmedizin | Praxis KUHENDRAN, Bruchsal

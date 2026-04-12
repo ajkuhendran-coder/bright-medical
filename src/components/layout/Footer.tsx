@@ -66,7 +66,7 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="mt-12 pt-8 border-t border-white/10 text-center">
           <p className="text-white/40 text-xs">
-            &copy; 2026 Bright Medical — Dr. med. Ajanth Kuhendran. Alle Rechte vorbehalten.
+            &copy; 2026 Bright Medical — Ajanth Kuhendran. Alle Rechte vorbehalten.
           </p>
         </div>
       </div>

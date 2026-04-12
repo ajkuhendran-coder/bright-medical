@@ -16,7 +16,7 @@ export default function AGB() {
             <p className="text-slate-body/80 leading-relaxed">
               (1) Diese Allgemeinen Gesch&auml;ftsbedingungen (nachfolgend &bdquo;AGB&ldquo;) gelten
               f&uuml;r alle Vertr&auml;ge &uuml;ber Coaching-Dienstleistungen zwischen Bright Medical,
-              Inhaber Dr. med. Ajanth Kuhendran, Am Alten G&uuml;terbahnhof 24, 76646 Bruchsal
+              Inhaber Ajanth Kuhendran, Am Alten G&uuml;terbahnhof 24, 76646 Bruchsal
               (nachfolgend &bdquo;Anbieter&ldquo;) und dem Klienten (nachfolgend &bdquo;Klient&ldquo;).
             </p>
             <p className="text-slate-body/80 leading-relaxed mt-2">
@@ -63,7 +63,7 @@ export default function AGB() {
               ersetzt keine &auml;rztliche Beratung, Untersuchung oder Behandlung.
             </p>
             <p className="text-slate-body/80 leading-relaxed mt-2">
-              (2) Der Anbieter, Dr. med. Ajanth Kuhendran, ist als Facharzt f&uuml;r
+              (2) Der Anbieter, Ajanth Kuhendran, ist als Facharzt f&uuml;r
               Allgemeinmedizin approbiert. Die &auml;rztliche T&auml;tigkeit wird jedoch
               ausschlie&szlig;lich in der <strong>Praxis KUHENDRAN</strong> (nicht &uuml;ber
               Bright Medical) und nach der Geb&uuml;hrenordnung f&uuml;r &Auml;rzte (GO&Auml;)
@@ -141,7 +141,7 @@ export default function AGB() {
               </p>
               <p className="text-slate-body/80 leading-relaxed mt-2">
                 Um Ihr Widerrufsrecht auszu&uuml;ben, m&uuml;ssen Sie uns &ndash; Bright Medical,
-                Inhaber Dr. med. Ajanth Kuhendran, Am Alten G&uuml;terbahnhof 24, 76646 Bruchsal,
+                Inhaber Ajanth Kuhendran, Am Alten G&uuml;terbahnhof 24, 76646 Bruchsal,
                 E-Mail: info@bright-medical.de &ndash; mittels einer eindeutigen Erkl&auml;rung
                 (z.&nbsp;B. ein mit der Post versandter Brief oder eine E-Mail) &uuml;ber Ihren
                 Entschluss, diesen Vertrag zu widerrufen, informieren.

@@ -8,19 +8,15 @@ export default function Contact() {
   const ref = useScrollAnimation()
   const [formState, setFormState] = useState<FormState>('idle')
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
+    name: '',
     email: '',
     phone: '',
-    subject: '',
-    situation: '',
-    tried: '',
     message: '',
     privacy: false,
     honeypot: '',
   })
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const target = e.target
     const value = target instanceof HTMLInputElement && target.type === 'checkbox' ? target.checked : target.value
     setFormData((prev) => ({ ...prev, [target.name]: value }))
@@ -42,7 +38,7 @@ export default function Contact() {
       if (!response.ok) throw new Error('Fehler beim Senden')
 
       setFormState('success')
-      setFormData({ firstName: '', lastName: '', email: '', phone: '', subject: '', situation: '', tried: '', message: '', privacy: false, honeypot: '' })
+      setFormData({ name: '', email: '', phone: '', message: '', privacy: false, honeypot: '' })
     } catch {
       setFormState('error')
     }
@@ -71,14 +67,14 @@ export default function Contact() {
 
   return (
     <section id="kontakt" className="py-20 lg:py-28 bg-navy" ref={ref}>
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12 animate-on-scroll">
           <span className="text-teal text-sm font-semibold tracking-wider uppercase">Der erste Schritt</span>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mt-4 mb-6">
-            Lassen Sie uns herausfinden, ob wir zusammenpassen
+            Kostenloses Erstgespräch sichern
           </h2>
           <p className="text-white/60">
-            Ein paar kurze Fragen helfen uns, Ihre Situation besser zu verstehen — damit wir im Erstgespräch direkt für Sie da sein können.
+            Erzählen Sie uns kurz, was Sie beschäftigt — wir melden uns innerhalb von 24 Stunden.
           </p>
         </div>
 
@@ -88,51 +84,23 @@ export default function Contact() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="block text-sm font-medium text-navy mb-1.5">Vorname *</label>
-              <input type="text" name="firstName" value={formData.firstName} onChange={handleChange} required className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm" placeholder="Ihr Vorname" />
+              <label className="block text-sm font-medium text-navy mb-1.5">Name *</label>
+              <input type="text" name="name" value={formData.name} onChange={handleChange} required className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm" placeholder="Vor- und Nachname" />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-navy mb-1.5">Nachname *</label>
-              <input type="text" name="lastName" value={formData.lastName} onChange={handleChange} required className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm" placeholder="Ihr Nachname" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-sm font-medium text-navy mb-1.5">E-Mail *</label>
               <input type="email" name="email" value={formData.email} onChange={handleChange} required className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm" placeholder="ihre@email.de" />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-navy mb-1.5">Telefon (optional)</label>
-              <input type="tel" name="phone" value={formData.phone} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm" placeholder="+49 ..." />
-            </div>
           </div>
 
           <div className="mb-4">
-            <label className="block text-sm font-medium text-navy mb-1.5">Welches Thema beschäftigt Sie am meisten? *</label>
-            <select name="subject" value={formData.subject} onChange={handleChange} required className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm bg-white">
-              <option value="">Bitte wählen...</option>
-              <option value="Gewichtsoptimierung">Gewicht & Stoffwechsel — Ich möchte dauerhaft abnehmen</option>
-              <option value="Hormonoptimierung">Hormone — Energie, Schlaf und Vitalität optimieren</option>
-              <option value="Darmgesundheit">Darm — Verdauung, Erschöpfung, Post-COVID</option>
-              <option value="Longevity">Longevity — Gesund und vital älter werden</option>
-              <option value="Unsicher">Ich bin unsicher, was am besten passt</option>
-            </select>
-          </div>
-
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-navy mb-1.5">Beschreiben Sie kurz Ihre aktuelle Situation *</label>
-            <textarea name="situation" value={formData.situation} onChange={handleChange} required rows={3} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm resize-none" placeholder="Was belastet Sie aktuell am meisten? Wie fühlen Sie sich im Alltag?" />
-          </div>
-
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-navy mb-1.5">Was haben Sie bisher versucht? (optional)</label>
-            <textarea name="tried" value={formData.tried} onChange={handleChange} rows={2} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm resize-none" placeholder="Diäten, Programme, Arztbesuche — was hat bisher nicht funktioniert?" />
+            <label className="block text-sm font-medium text-navy mb-1.5">Telefon (optional)</label>
+            <input type="tel" name="phone" value={formData.phone} onChange={handleChange} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm" placeholder="+49 ..." />
           </div>
 
           <div className="mb-6">
-            <label className="block text-sm font-medium text-navy mb-1.5">Möchten Sie uns noch etwas mitteilen? (optional)</label>
-            <textarea name="message" value={formData.message} onChange={handleChange} rows={2} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm resize-none" placeholder="Fragen, Wünsche, Anmerkungen..." />
+            <label className="block text-sm font-medium text-navy mb-1.5">Was beschäftigt Sie gerade? *</label>
+            <textarea name="message" value={formData.message} onChange={handleChange} required rows={4} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm resize-none" placeholder="Beschreiben Sie kurz Ihre Situation — Gewicht, Energie, Hormone, oder etwas anderes..." />
           </div>
 
           <div className="mb-6">
@@ -161,13 +129,13 @@ export default function Contact() {
             ) : (
               <>
                 <Send size={18} />
-                Anfrage absenden
+                Erstgespräch anfragen
               </>
             )}
           </button>
 
           <p className="text-xs text-center text-slate-body/40 mt-4">
-            Wir melden uns innerhalb von 24 Stunden. Coaching-Dienstleistung im zweiten Gesundheitsmarkt.
+            Kostenlos & unverbindlich. Coaching-Dienstleistung im zweiten Gesundheitsmarkt.
           </p>
         </form>
       </div>
