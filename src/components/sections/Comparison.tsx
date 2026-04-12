@@ -2,6 +2,31 @@ import { Check, X as XIcon, Minus } from 'lucide-react'
 import { comparisonData } from '../../data/content'
 import { useScrollAnimation } from '../../hooks/useScrollAnimation'
 
+function CellContent({ cell }: { cell: string }) {
+  if (cell === 'Ja, inklusive' || cell.startsWith('Ja')) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-success font-semibold">
+        <Check size={16} /> {cell}
+      </span>
+    )
+  }
+  if (cell.startsWith('Nein')) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-red-400">
+        <XIcon size={16} /> {cell}
+      </span>
+    )
+  }
+  if (cell.startsWith('Nur') || cell.startsWith('Standardisiert') || cell.startsWith('Oft') || cell.startsWith('Abo') || cell.startsWith('Unterschiedlich') || cell.startsWith('Selten')) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-amber-500">
+        <Minus size={16} /> {cell}
+      </span>
+    )
+  }
+  return <>{cell}</>
+}
+
 export default function Comparison() {
   const ref = useScrollAnimation()
 
@@ -18,8 +43,43 @@ export default function Comparison() {
           </p>
         </div>
 
-        <div className="animate-on-scroll overflow-x-auto">
-          <table className="w-full min-w-[600px]">
+        {/* Mobile: Card Layout — Bright Medical prominent */}
+        <div className="lg:hidden animate-on-scroll space-y-4">
+          {comparisonData.rows.map((row, ri) => (
+            <div key={ri} className="rounded-2xl border border-gray-100 overflow-hidden">
+              {/* Feature Name */}
+              <div className="bg-gray-50 px-5 py-3">
+                <span className="font-semibold text-navy text-sm">{row[0]}</span>
+              </div>
+              {/* Bright Medical — highlighted */}
+              <div className="bg-teal/5 px-5 py-3 border-l-4 border-teal">
+                <span className="text-xs text-teal font-semibold uppercase tracking-wider">Bright Medical</span>
+                <div className="text-sm text-navy font-medium mt-1">
+                  <CellContent cell={row[3]} />
+                </div>
+              </div>
+              {/* Competitors */}
+              <div className="px-5 py-3 grid grid-cols-2 gap-3 text-xs">
+                <div>
+                  <span className="text-slate-body/40 font-medium">Typischer Coach</span>
+                  <div className="text-slate-body/60 mt-0.5">
+                    <CellContent cell={row[1]} />
+                  </div>
+                </div>
+                <div>
+                  <span className="text-slate-body/40 font-medium">Telemedizin</span>
+                  <div className="text-slate-body/60 mt-0.5">
+                    <CellContent cell={row[2]} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop: Table Layout */}
+        <div className="animate-on-scroll hidden lg:block">
+          <table className="w-full">
             <thead>
               <tr>
                 {comparisonData.headers.map((header, i) => (
@@ -50,21 +110,7 @@ export default function Comparison() {
                             : 'text-slate-body/60'
                       } ${ri === comparisonData.rows.length - 1 && ci === 3 ? 'rounded-b-2xl' : ''}`}
                     >
-                      {cell === 'Ja, inklusive' ? (
-                        <span className="inline-flex items-center gap-1.5 text-success font-semibold">
-                          <Check size={16} /> {cell}
-                        </span>
-                      ) : cell.startsWith('Nein') ? (
-                        <span className="inline-flex items-center gap-1.5 text-red-400">
-                          <XIcon size={16} /> {cell}
-                        </span>
-                      ) : cell.startsWith('Nur') || cell.startsWith('Standardisiert') ? (
-                        <span className="inline-flex items-center gap-1.5 text-amber-500">
-                          <Minus size={16} /> {cell}
-                        </span>
-                      ) : (
-                        cell
-                      )}
+                      <CellContent cell={cell} />
                     </td>
                   ))}
                 </tr>
