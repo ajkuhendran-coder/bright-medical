@@ -52,7 +52,7 @@ export default function AGB() {
           </div>
 
           {/* § 3 KERNPARAGRAPH: Abgrenzung */}
-          <div className="border-l-4 border-bright-coral pl-4">
+          <div className="border-l-4 border-teal pl-4">
             <h2 className="text-xl font-bold text-navy mb-2">
               &sect; 3 Abgrenzung zur &auml;rztlichen Behandlung (KERNKLAUSEL)
             </h2>

@@ -27,8 +27,8 @@ export default function Home() {
       <Comparison />
       <Urgency />
       <Timeline />
-      <Metrics />
       <ProcessSteps />
+      <Metrics />
       <NotForYou />
       <FAQ />
       <Contact />

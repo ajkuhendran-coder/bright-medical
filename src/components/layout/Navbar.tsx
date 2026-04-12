@@ -91,7 +91,7 @@ export default function Navbar() {
             className={`lg:hidden p-2 bg-transparent border-none cursor-pointer ${
               scrolled && !mobileOpen ? 'text-navy' : 'text-white'
             }`}
-            aria-label="Menu"
+            aria-label={mobileOpen ? 'Menü schließen' : 'Menü öffnen'}
           >
             {mobileOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
