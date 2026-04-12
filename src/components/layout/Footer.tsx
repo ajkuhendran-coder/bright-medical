@@ -19,7 +19,7 @@ export default function Footer() {
             <div className="mt-6 space-y-3">
               <div className="flex items-center gap-3 text-white/70 text-sm">
                 <MapPin size={16} className="text-teal shrink-0" />
-                <span>Am Alten Güterbahnhof 24, 76646 Bruchsal</span>
+                <span>Bruchsal</span>
               </div>
               <div className="flex items-center gap-3 text-white/70 text-sm">
                 <Mail size={16} className="text-teal shrink-0" />
