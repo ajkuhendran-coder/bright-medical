@@ -1,8 +1,19 @@
 import { Resend } from 'resend'
 import type { Context } from '@netlify/functions'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 
 const ADMIN_EMAIL = 'info@brightmedical.de'
 const FROM_EMAIL = 'Bright Medical <noreply@brightmedical.de>'
+
+// Load E0a template once at module init (file is bundled via netlify.toml `included_files`).
+const E0A_TEMPLATE = readFileSync(
+  fileURLToPath(new URL('../../email-templates/e0a-confirmation.html', import.meta.url)),
+  'utf8'
+)
+function renderE0a(firstName: string): string {
+  return E0A_TEMPLATE.replaceAll('{{firstName}}', firstName)
+}
 
 // --- XSS Protection ---
 function escapeHtml(str: string): string {
@@ -139,39 +150,13 @@ export default async (req: Request, _context: Context) => {
       `,
     })
 
-    // 2. Send confirmation to prospect
+    // 2. Send confirmation to prospect (E0a template)
     await resend.emails.send({
       from: FROM_EMAIL,
       replyTo: ADMIN_EMAIL,
       to: email,
-      subject: 'Ihre Anfrage bei Bright Medical — wir melden uns!',
-      html: `
-        <div style="font-family:sans-serif;max-width:600px;margin:0 auto;">
-          <div style="background:#0F2A55;padding:30px;text-align:center;border-radius:12px 12px 0 0;">
-            <h1 style="color:white;margin:0;font-size:24px;">Bright Medical</h1>
-            <p style="color:#06B6D4;margin:5px 0 0;font-size:14px;">Ärztlich begleitet. Individuell optimiert.</p>
-          </div>
-          <div style="padding:30px;background:#f8fafc;border-radius:0 0 12px 12px;">
-            <p>Hallo ${safeFirstName},</p>
-            <p>vielen Dank für Ihre Anfrage! Wir haben Ihre Nachricht erhalten und melden uns innerhalb von <strong>24 Stunden</strong> bei Ihnen.</p>
-            <p>Falls Sie vorab Fragen haben, antworten Sie einfach auf diese E-Mail.</p>
-            <p>Herzliche Grüße,</p>
-            <p style="margin:0;">
-              <strong>Ajanth Kuhendran</strong><br>
-              <span style="color:#555;font-size:13px;">Facharzt für Allgemeinmedizin</span><br>
-              <span style="color:#555;font-size:13px;">Spezialist für funktionelle &amp; integrative Medizin</span>
-            </p>
-            <p style="margin:16px 0 0;">
-              <img src="https://brightmedical.de/images/logo-light.png" alt="Bright Medical" style="height:36px;width:auto;" />
-            </p>
-            <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0;">
-            <p style="color:#999;font-size:11px;">
-              Coaching-Dienstleistung im zweiten Gesundheitsmarkt. Keine Kassenleistung.<br>
-              Bright Medical · Am Alten Güterbahnhof 24 · 76646 Bruchsal
-            </p>
-          </div>
-        </div>
-      `,
+      subject: 'Ihre Anfrage ist bei uns angekommen',
+      html: renderE0a(safeFirstName),
     })
 
     return new Response(JSON.stringify({ success: true }), { status: 200 })
