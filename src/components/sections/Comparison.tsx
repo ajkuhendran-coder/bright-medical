@@ -43,7 +43,7 @@ export default function Comparison() {
           </p>
         </div>
 
-        {/* Mobile: Card Layout — Bright Medical prominent */}
+        {/* Mobile: Card Layout, Bright Medical prominent */}
         <div className="lg:hidden animate-on-scroll space-y-4">
           {comparisonData.rows.map((row, ri) => (
             <div key={ri} className="rounded-2xl border border-gray-100 overflow-hidden">
@@ -51,7 +51,7 @@ export default function Comparison() {
               <div className="bg-gray-50 px-5 py-3">
                 <span className="font-semibold text-navy text-sm">{row[0]}</span>
               </div>
-              {/* Bright Medical — highlighted */}
+              {/* Bright Medical, highlighted */}
               <div className="bg-teal/5 px-5 py-3 border-l-4 border-teal">
                 <span className="text-xs text-teal font-semibold uppercase tracking-wider">Bright Medical</span>
                 <div className="text-sm text-navy font-medium mt-1">

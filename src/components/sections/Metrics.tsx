@@ -18,7 +18,7 @@ export default function Metrics() {
             Wir messen, was sich verändert
           </h2>
           <p className="text-lg text-slate-body/70 max-w-2xl mx-auto">
-            Nicht nur auf der Waage — sondern in allen Dimensionen Ihrer Gesundheit.
+            Nicht nur auf der Waage, sondern in allen Dimensionen Ihrer Gesundheit.
           </p>
         </div>
 

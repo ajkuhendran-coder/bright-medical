@@ -72,7 +72,7 @@ export default function Contact() {
             Kostenloses Erstgespräch sichern
           </h2>
           <p className="text-white/60">
-            Erzählen Sie uns kurz, was Sie beschäftigt — wir melden uns innerhalb von 24 Stunden.
+            Erzählen Sie uns kurz, was Sie beschäftigt. Wir melden uns innerhalb von 24 Stunden.
           </p>
         </div>
 
@@ -98,7 +98,7 @@ export default function Contact() {
 
           <div className="mb-6">
             <label htmlFor="contact-message" className="block text-sm font-medium text-navy mb-1.5">Was beschäftigt Sie gerade? *</label>
-            <textarea id="contact-message" name="message" value={formData.message} onChange={handleChange} required rows={4} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm resize-none" placeholder="Beschreiben Sie kurz Ihre Situation — Gewicht, Energie, Hormone, oder etwas anderes..." />
+            <textarea id="contact-message" name="message" value={formData.message} onChange={handleChange} required rows={4} className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-teal focus:ring-2 focus:ring-teal/20 outline-none transition-all text-sm resize-none" placeholder="Beschreiben Sie kurz Ihre Situation: Gewicht, Energie, Hormone, oder etwas anderes..." />
           </div>
 
           <div className="mb-6">

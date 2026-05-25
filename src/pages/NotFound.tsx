@@ -17,7 +17,7 @@ export default function NotFound() {
         </div>
 
         <p className="text-lg text-white/70 leading-relaxed mb-3">
-          Diese Seite existiert leider nicht — oder sie wurde verschoben.
+          Diese Seite existiert leider nicht, oder sie wurde verschoben.
         </p>
         <p className="text-sm text-white/50 mb-10">
           Kein Problem. Finden wir gemeinsam den richtigen Weg.

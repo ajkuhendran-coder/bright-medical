@@ -37,7 +37,7 @@ export default function NotForYou() {
             onClick={() => document.querySelector('#kontakt')?.scrollIntoView({ behavior: 'smooth' })}
             className="bg-success hover:bg-green-700 text-white px-8 py-4 rounded-full text-base font-semibold transition-all cursor-pointer border-none shadow-lg shadow-green-500/25"
           >
-            Klingt nach mir — ich möchte ein Erstgespräch
+            Klingt nach mir: ich möchte ein Erstgespräch
           </button>
         </div>
       </div>
