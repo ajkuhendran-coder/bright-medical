@@ -5,7 +5,7 @@ const qualifications = [
   'Facharzt für Allgemeinmedizin',
   'Funktionelle Medizin & erweiterte Diagnostik',
   'Longevity-Medizin & Biohacking',
-  'Eigene Erfahrung — ich praktiziere, was ich empfehle',
+  'Eigene Erfahrung: ich praktiziere, was ich empfehle',
 ]
 
 export default function AboutMe() {
@@ -40,17 +40,17 @@ export default function AboutMe() {
 
             <div className="space-y-4 mt-8 mb-8">
               <p className="text-slate-body/80 leading-relaxed">
-                Ich habe jahrelang in der klassischen Kassenmedizin gearbeitet — und dabei immer wieder dasselbe erlebt:
+                Ich habe jahrelang in der klassischen Kassenmedizin gearbeitet, und dabei immer wieder dasselbe erlebt:
                 Menschen sitzen vor mir, ihre Blutwerte sind „in Ordnung", aber sie fühlen sich alles andere als gut.
                 15-Minuten-Termine reichen nicht, um wirklich hinzuschauen.
               </p>
               <p className="text-slate-body/80 leading-relaxed">
                 Das hat mich nicht losgelassen. Ich wollte verstehen, warum der Körper Signale sendet,
                 die im Kassenstandard untergehen. Heute verbinde ich ärztliches Wissen mit persönlichem
-                Coaching — für Menschen, die mehr wollen als „das ist halt so".
+                Coaching, für Menschen, die mehr wollen als „das ist halt so".
               </p>
               <p className="text-slate-body/80 leading-relaxed italic font-[var(--font-heading)] text-navy text-lg">
-                „Ich praktiziere selbst, was ich empfehle — vom CGM-Monitoring über Wearable-Tracking
+                „Ich praktiziere selbst, was ich empfehle: vom CGM-Monitoring über Wearable-Tracking
                 bis zur gezielten Supplementierung. Nicht weil es modern ist, sondern weil es funktioniert."
               </p>
             </div>
@@ -70,7 +70,7 @@ export default function AboutMe() {
               onClick={() => document.querySelector('#kontakt')?.scrollIntoView({ behavior: 'smooth' })}
               className="bg-teal hover:bg-teal-dark text-white px-8 py-4 rounded-full text-base font-semibold transition-all cursor-pointer border-none shadow-lg shadow-teal/25"
             >
-              Lernen Sie mich kennen — im kostenlosen Erstgespräch
+              Lernen Sie mich kennen: im kostenlosen Erstgespräch
             </button>
           </div>
         </div>

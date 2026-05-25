@@ -26,7 +26,7 @@ export default function Programs() {
               Ihr erster Schritt zu nachhaltiger Gesundheit
             </h2>
             <p className="text-lg text-slate-body/70 max-w-2xl mx-auto">
-              Ein Ziel: Ihre Gesundheit nachhaltig optimieren — mit ärztlicher Expertise und persönlichem Coaching. Wir empfehlen, mit unserem Hauptprogramm zu starten.
+              Ein Ziel: Ihre Gesundheit nachhaltig optimieren, mit ärztlicher Expertise und persönlichem Coaching. Wir empfehlen, mit unserem Hauptprogramm zu starten.
             </p>
           </div>
 

@@ -19,7 +19,7 @@ export default function PainPoints() {
           </h2>
           <p className="text-lg text-slate-body/70 max-w-2xl mx-auto">
             Sie haben schon vieles versucht. Und fragen sich: Warum sollte es diesmal anders sein?
-            Weil wir nicht an der Oberfläche bleiben — sondern verstehen, was Ihr Körper wirklich braucht.
+            Weil wir nicht an der Oberfläche bleiben, sondern verstehen, was Ihr Körper wirklich braucht.
           </p>
         </div>
 

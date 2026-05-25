@@ -21,7 +21,7 @@ export default function Hero() {
           </div>
 
           <h1 className="text-5xl xl:text-6xl font-bold text-white leading-tight mb-6">
-            Gesundheit, die Sie spüren —{' '}
+            Gesundheit, die Sie spüren:{' '}
             <span className="text-teal">ärztlich begleitet</span>, mit messbaren Ergebnissen.
           </h1>
 
@@ -49,7 +49,7 @@ export default function Hero() {
         <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-navy to-transparent" />
       </div>
 
-      {/* Mobile: Emergent-Technik — Bild fullscreen, Text links mit horizontalem Gradient */}
+      {/* Mobile: Emergent-Technik, Bild fullscreen, Text links mit horizontalem Gradient */}
       <div className="lg:hidden relative min-h-screen">
         {/* Fullscreen Background Photo */}
         <img src="/images/doctor-hero.webp" alt="" className="absolute inset-0 w-full h-full object-cover object-[center_25%]" />
@@ -60,11 +60,11 @@ export default function Hero() {
         {/* Top gradient for navbar area */}
         <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-navy/60 to-transparent z-[1]" />
 
-        {/* Text Overlay — links positioniert, padding-right drückt Text weg vom Gesicht */}
+        {/* Text Overlay, links positioniert, padding-right drückt Text weg vom Gesicht */}
         <div className="absolute inset-0 z-[2] flex items-center" style={{ paddingRight: '55%', paddingTop: '12vh' }}>
           <div className="px-5 sm:px-8">
             <h1 className="text-[clamp(1.4rem,5vw,1.8rem)] font-bold text-white leading-tight mb-3" style={{ textShadow: '0 2px 8px rgba(0,0,0,0.4)' }}>
-              Gesundheit, die Sie spüren —{' '}
+              Gesundheit, die Sie spüren:{' '}
               <span className="text-teal">ärztlich begleitet</span>.
             </h1>
 

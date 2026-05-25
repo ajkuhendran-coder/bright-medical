@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Local Google Fonts — DSGVO-konform, kein externer Aufruf */
+/* Local Google Fonts, DSGVO-konform, kein externer Aufruf */
 @font-face {
   font-family: 'DM Sans';
   font-style: normal;
