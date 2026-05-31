@@ -1,0 +1,119 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="de">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="x-apple-disable-message-reformatting" />
+<meta name="color-scheme" content="light only" />
+<meta name="supported-color-schemes" content="light only" />
+<title>Erinnerung: Ihr Coaching-Termin</title>
+<style type="text/css">
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@400;500;600;700&display=swap');
+body { margin:0; padding:0; width:100% !important; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; background:#F6F8FA; }
+img { border:0; outline:none; text-decoration:none; -ms-interpolation-mode:bicubic; display:block; }
+a { text-decoration:none; }
+table { border-collapse:collapse; }
+.serif { font-family:'Fraunces', Georgia, 'Times New Roman', serif; }
+.sans  { font-family:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; }
+@media only screen and (max-width:620px) {
+  .container { width:100% !important; }
+  .px { padding-left:24px !important; padding-right:24px !important; }
+  .body-pad { padding:32px 24px !important; }
+  .h1 { font-size:24px !important; line-height:1.25 !important; }
+  .stack { display:block !important; width:100% !important; padding:0 !important; border-left:0 !important; }
+}
+</style>
+</head>
+<body style="margin:0;padding:0;background:#F6F8FA;">
+
+<div style="display:none;font-size:1px;line-height:1px;max-height:0px;max-width:0px;opacity:0;overflow:hidden;mso-hide:all;color:#F6F8FA;">In 24 Stunden: Ihr {{TERMIN_TYP}}.&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F6F8FA;"><tr><td align="center" style="padding:24px 12px;">
+<table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background:#FFFFFF;">
+
+<!-- Header -->
+<tr><td class="px" style="padding:14px 40px;background:#F6F8FA;border-bottom:1px solid #E3E8EE;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+<td align="left" valign="middle"><img src="https://brightmedical.de/images/logo-light.png" alt="Bright Medical" width="155" style="height:36px;width:auto;display:block;" /></td>
+<td align="right" valign="middle" class="sans" style="font-family:'Inter',Arial,sans-serif;font-size:10px;color:#00B8D4;letter-spacing:1.8px;text-transform:uppercase;font-weight:600;">Terminerinnerung</td>
+</tr></table></td></tr>
+
+<!-- Body -->
+<tr><td class="body-pad" style="padding:40px 40px 32px;background:#FFFFFF;">
+
+<div class="sans" style="font-family:'Inter',Arial,sans-serif;font-size:11px;font-weight:600;letter-spacing:2.2px;color:#00B8D4;text-transform:uppercase;margin-bottom:14px;">In 24 Stunden</div>
+<div class="serif h1" style="font-family:'Fraunces',Georgia,serif;font-size:30px;line-height:1.18;letter-spacing:-0.5px;color:#0A2540;margin-bottom:28px;font-weight:500;">{{HEADLINE}}</div>
+
+<!-- Termin-Card -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #E3E8EE;border-radius:16px;border-collapse:separate;overflow:hidden;margin-bottom:24px;">
+<tr><td align="center" style="background:#00B8D4;background:linear-gradient(180deg,#00B8D4 0%,#0099B3 100%);color:#FFFFFF;padding:10px 20px;font-family:'Inter',Arial,sans-serif;font-size:11px;letter-spacing:1.6px;font-weight:600;text-transform:uppercase;">{{WOCHENTAG}} · {{TAG_MONAT}} · {{JAHR}}</td></tr>
+<tr><td style="padding:28px 24px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+<tr>
+<td class="stack" valign="top" width="50%" style="width:50%;padding-right:14px;">
+<div class="sans" style="font-family:'Inter',Arial,sans-serif;font-size:10px;letter-spacing:1.5px;color:#5A6A80;text-transform:uppercase;margin-bottom:6px;font-weight:600;">Uhrzeit</div>
+<div class="serif" style="font-family:'Fraunces',Georgia,serif;font-size:26px;line-height:1;color:#0A2540;font-weight:500;">{{UHRZEIT}}</div>
+<div class="sans" style="font-family:'Inter',Arial,sans-serif;font-size:12px;color:#5A6A80;margin-top:6px;">{{DAUER}} · MEZ</div>
+</td>
+<td class="stack" valign="top" width="50%" style="width:50%;padding-left:24px;border-left:1px solid #E3E8EE;">
+<div class="sans" style="font-family:'Inter',Arial,sans-serif;font-size:10px;letter-spacing:1.5px;color:#5A6A80;text-transform:uppercase;margin-bottom:6px;font-weight:600;">{{ORT_LABEL}}</div>
+<div class="sans" style="font-family:'Inter',Arial,sans-serif;font-size:14px;font-weight:600;color:#0A2540;line-height:1.3;">{{ORT_PRIMARY}}</div>
+<div class="sans" style="font-family:'Inter',Arial,sans-serif;font-size:12px;color:#5A6A80;margin-top:4px;line-height:1.5;">{{ORT_HINWEIS}}</div>
+</td>
+</tr>
+</table>
+</td></tr>
+</table>
+
+<!-- Quick actions: einfacher Mailto-Verschieben-Link -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:32px;">
+<tr><td align="center" style="padding:0;">
+<a href="mailto:info@brightmedical.de?subject=Termin%20verschieben%20%E2%80%94%20{{TAG_MONAT}}%20{{UHRZEIT}}" style="display:inline-block;padding:14px 28px;border-radius:999px;background:#FFFFFF;color:#0A2540;border:1.5px solid #0A2540;font-family:'Inter',Arial,sans-serif;font-size:14px;font-weight:600;letter-spacing:0.1px;">Termin verschieben</a>
+</td></tr>
+</table>
+
+<!-- Vorbereitung -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F6F8FA;border:1px solid #E3E8EE;border-radius:16px;border-collapse:separate;margin-bottom:24px;">
+<tr><td style="padding:24px;">
+<div class="sans" style="font-family:'Inter',Arial,sans-serif;font-size:11px;font-weight:600;letter-spacing:2.2px;color:#00B8D4;text-transform:uppercase;margin-bottom:14px;">Kurze Vorbereitung</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+<tr>
+<td valign="top" width="24" style="width:24px;padding:6px 12px 6px 0;"><div style="width:14px;height:14px;border:1.5px solid #00B8D4;border-radius:3px;"></div></td>
+<td valign="top" style="padding:6px 0;font-family:'Inter',Arial,sans-serif;font-size:13px;line-height:1.55;color:#2A3A52;">{{VORBEREITUNG_1}}</td>
+</tr>
+<tr>
+<td valign="top" width="24" style="width:24px;padding:6px 12px 6px 0;"><div style="width:14px;height:14px;border:1.5px solid #00B8D4;border-radius:3px;"></div></td>
+<td valign="top" style="padding:6px 0;font-family:'Inter',Arial,sans-serif;font-size:13px;line-height:1.55;color:#2A3A52;">{{VORBEREITUNG_2}}</td>
+</tr>
+<tr>
+<td valign="top" width="24" style="width:24px;padding:6px 12px 6px 0;"><div style="width:14px;height:14px;border:1.5px solid #00B8D4;border-radius:3px;"></div></td>
+<td valign="top" style="padding:6px 0;font-family:'Inter',Arial,sans-serif;font-size:13px;line-height:1.55;color:#2A3A52;">{{VORBEREITUNG_3}}</td>
+</tr>
+</table>
+</td></tr>
+</table>
+
+<!-- Reply-Hint -->
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:rgba(0,184,212,0.04);border-left:3px solid #00B8D4;margin-bottom:8px;">
+<tr><td style="padding:14px 18px;font-family:'Inter',Arial,sans-serif;font-size:13px;line-height:1.6;color:#2A3A52;">Etwas Dringendes? Antworten Sie einfach auf diese Mail.</td></tr>
+</table>
+
+<!-- Signatur -->
+<div style="margin-top:32px;padding-top:22px;border-top:1px solid #E3E8EE;">
+<div class="sans" style="font-family:'Inter',Arial,sans-serif;font-size:14px;font-weight:600;color:#0A2540;">Ajanth Kuhendran</div>
+<div class="sans" style="font-family:'Inter',Arial,sans-serif;font-size:12px;color:#5A6A80;line-height:1.5;">Bright Medical</div>
+</div>
+
+</td></tr>
+
+<!-- Footer -->
+<tr><td class="px" style="background:#0B2040;padding:24px 40px 32px;color:rgba(255,255,255,0.6);font-family:'Inter',Arial,sans-serif;font-size:12px;line-height:1.7;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+<tr><td valign="middle" align="left"><img src="https://brightmedical.de/images/logo-dark.png" alt="Bright Medical" width="90" style="height:38px;width:auto;display:block;" /></td>
+<td valign="middle" align="right" style="font-size:11px;letter-spacing:0.5px;color:#FFFFFF;"><a href="https://brightmedical.de" style="color:#FFFFFF;text-decoration:none;">Programm</a>&nbsp;·&nbsp;<a href="https://brightmedical.de/datenschutz" style="color:#FFFFFF;text-decoration:none;">Datenschutz</a>&nbsp;·&nbsp;<a href="https://brightmedical.de/impressum" style="color:#FFFFFF;text-decoration:none;">Impressum</a></td></tr>
+<tr><td colspan="2" style="padding-top:18px;border-top:1px solid rgba(255,255,255,0.12);"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:18px;"><tr><td style="font-size:11px;color:rgba(255,255,255,0.6);padding-top:18px;line-height:1.55;font-style:italic;">Coaching-Dienstleistung im zweiten Gesundheitsmarkt. Keine Kassenleistung.<br />Bright Medical · Am Alten Güterbahnhof 24 · 76646 Bruchsal · info@brightmedical.de</td></tr></table></td></tr>
+</table></td></tr>
+
+</table></td></tr></table>
+</body></html>

@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="BM Workflow" />
+<meta name="theme-color" content="#0F2A55" />
+<meta name="robots" content="noindex,nofollow" />
+<title>Bright Medical · Klienten-Workflow</title>
+<style>
+  :root {
+    --navy: #0F2A55;
+    --navy-deep: #0B2040;
+    --teal: #06B6D4;
+    --teal-dark: #0099B3;
+    --cream: #F5EFE6;
+    --ink: #1B2A41;
+    --muted: #5A6A80;
+    --line: #E3E8EE;
+    --bg: #F6F8FA;
+    --ok: #16a34a;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Arial, sans-serif;
+    padding: 0 0 60px; -webkit-text-size-adjust: 100%;
+  }
+  .wrap { max-width: 680px; margin: 0 auto; padding: 0 16px; }
+
+  header {
+    background: linear-gradient(160deg, var(--navy) 0%, var(--navy-deep) 100%);
+    color: #fff; padding: calc(env(safe-area-inset-top) + 22px) 16px 22px;
+  }
+  header .wrap { padding: 0 16px; }
+  .brand { font-size: 13px; letter-spacing: 2.5px; text-transform: uppercase; color: var(--teal); font-weight: 700; }
+  h1 { font-size: 24px; margin: 6px 0 4px; font-weight: 700; letter-spacing: -0.3px; }
+  .sub { font-size: 14px; color: rgba(255,255,255,0.75); line-height: 1.5; }
+
+  .modebar { display: flex; gap: 8px; margin: 18px 0 6px; }
+  .modebtn {
+    flex: 1; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.06);
+    color: #fff; padding: 11px 8px; border-radius: 12px; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all .15s; line-height: 1.3;
+  }
+  .modebtn.active { background: var(--teal); border-color: var(--teal); color: #fff; }
+  .modebtn small { display: block; font-weight: 400; font-size: 11px; opacity: .8; margin-top: 2px; }
+
+  .progress-card {
+    background: #fff; border: 1px solid var(--line); border-radius: 16px;
+    padding: 16px 18px; margin: 18px 0 8px; box-shadow: 0 2px 8px rgba(15,42,85,0.04);
+  }
+  .progress-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  .progress-top .label { font-size: 13px; color: var(--muted); font-weight: 600; }
+  .progress-top .count { font-size: 22px; font-weight: 700; color: var(--navy); }
+  .progress-top .count small { font-size: 14px; color: var(--muted); font-weight: 500; }
+  .bar { height: 8px; background: var(--line); border-radius: 99px; overflow: hidden; }
+  .bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--teal), var(--teal-dark)); border-radius: 99px; transition: width .3s; }
+  .next-hint { margin-top: 12px; font-size: 13px; color: var(--navy); background: rgba(6,182,212,0.08); border-radius: 10px; padding: 10px 12px; line-height: 1.4; }
+  .next-hint b { color: var(--teal-dark); }
+
+  .steps { margin-top: 14px; }
+  .step {
+    background: #fff; border: 1px solid var(--line); border-radius: 16px;
+    margin-bottom: 12px; overflow: hidden; transition: all .2s;
+    box-shadow: 0 1px 4px rgba(15,42,85,0.03);
+  }
+  .step.done { opacity: 0.62; }
+  .step.current { border-color: var(--teal); box-shadow: 0 4px 16px rgba(6,182,212,0.18); }
+  .step-head { display: flex; align-items: flex-start; gap: 13px; padding: 16px; cursor: pointer; }
+  .dot {
+    flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--line);
+    display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px;
+    color: var(--muted); background: #fff; transition: all .2s;
+  }
+  .step.done .dot { background: var(--ok); border-color: var(--ok); color: #fff; }
+  .step.current .dot { background: var(--teal); border-color: var(--teal); color: #fff; }
+  .step-main { flex: 1; min-width: 0; }
+  .step-kind {
+    display: inline-block; font-size: 10px; letter-spacing: 1.2px; text-transform: uppercase;
+    font-weight: 700; padding: 2px 8px; border-radius: 99px; margin-bottom: 5px;
+  }
+  .kind-do { background: rgba(6,182,212,0.12); color: var(--teal-dark); }
+  .kind-wait { background: #FEF3C7; color: #B45309; }
+  .step-title { font-size: 16px; font-weight: 700; color: var(--ink); line-height: 1.3; }
+  .step-tool { font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .chev { flex-shrink: 0; color: var(--muted); transition: transform .2s; font-size: 18px; margin-top: 4px; }
+  .step.open .chev { transform: rotate(90deg); }
+  .step-body { display: none; padding: 0 16px 16px 61px; }
+  .step.open .step-body { display: block; }
+  .step-body p { margin: 0 0 10px; font-size: 14px; line-height: 1.6; color: var(--ink); }
+  .step-body .waitfor { font-size: 13px; color: #B45309; background: #FEF8EC; border-radius: 10px; padding: 9px 12px; line-height: 1.45; }
+  .step-body .doaction { font-size: 13px; color: var(--teal-dark); background: rgba(6,182,212,0.07); border-radius: 10px; padding: 9px 12px; line-height: 1.45; }
+  .step-body ul { margin: 6px 0 10px; padding-left: 18px; }
+  .step-body li { font-size: 13.5px; line-height: 1.55; color: var(--ink); margin-bottom: 4px; }
+  .toggle-done {
+    margin-top: 4px; width: 100%; border: 1px solid var(--line); background: var(--bg);
+    color: var(--navy); padding: 10px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .step.done .toggle-done { background: #f0fdf4; border-color: #bbf7d0; color: var(--ok); }
+
+  .footer-actions { margin-top: 22px; text-align: center; }
+  .reset { background: none; border: none; color: var(--muted); font-size: 13px; text-decoration: underline; cursor: pointer; }
+  .tip { background: var(--cream); border-radius: 14px; padding: 16px 18px; margin-top: 20px; font-size: 13.5px; line-height: 1.6; color: #6b5d48; }
+  .tip b { color: #4a3f30; }
+
+  /* Gate */
+  #gate { position: fixed; inset: 0; z-index: 1000; background: linear-gradient(160deg, var(--navy) 0%, var(--navy-deep) 100%); display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .gate-card { background: #fff; border-radius: 20px; padding: 34px 26px; max-width: 360px; width: 100%; text-align: center; box-shadow: 0 16px 48px rgba(0,0,0,0.35); }
+  .gate-brand { font-size: 12px; letter-spacing: 2.5px; text-transform: uppercase; color: var(--teal-dark); font-weight: 700; }
+  .gate-h { font-size: 20px; margin: 8px 0 6px; color: var(--navy); }
+  .gate-p { font-size: 13.5px; color: var(--muted); line-height: 1.5; margin: 0 0 18px; }
+  #gateInput { width: 100%; padding: 13px 14px; border: 1px solid var(--line); border-radius: 12px; font-size: 16px; margin-bottom: 12px; }
+  #gateInput:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(6,182,212,0.15); }
+  #gateBtn { width: 100%; padding: 13px; border: none; border-radius: 12px; background: var(--teal); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
+  #gateBtn:disabled { opacity: .6; }
+  .gate-err { color: #dc2626; font-size: 13px; margin-top: 10px; min-height: 18px; }
+  #app { display: none; }
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gate-card">
+    <div class="gate-brand">Bright Medical</div>
+    <h2 class="gate-h">Geschützter Bereich</h2>
+    <p class="gate-p">Bitte gib dein Zugangs-Geheimnis ein — dasselbe wie in deiner Mail-App.</p>
+    <input type="password" id="gateInput" placeholder="bm_…" autocomplete="current-password" enterkeyhint="go" />
+    <button id="gateBtn" onclick="unlock()">Entsperren</button>
+    <div class="gate-err" id="gateErr"></div>
+  </div>
+</div>
+
+<div id="app">
+<header>
+  <div class="wrap">
+    <div class="brand">Bright Medical</div>
+    <h1>Klienten-Workflow</h1>
+    <div class="sub">Dein roter Faden vom ersten Kontakt bis Programm-Start. Tippe einen Schritt an für Details, hake ihn ab wenn erledigt.</div>
+    <div class="modebar">
+      <button class="modebtn active" data-mode="fast" onclick="setMode('fast')">Sprechstunde<small>Fast-Track (alles besprochen)</small></button>
+      <button class="modebtn" data-mode="standard" onclick="setMode('standard')">Homepage<small>Standard (mit Fragebogen)</small></button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="progress-card">
+    <div class="progress-top">
+      <span class="label">Fortschritt</span>
+      <span class="count"><span id="doneCount">0</span><small>/<span id="totalCount">0</span> Schritten</small></span>
+    </div>
+    <div class="bar"><span id="barFill" style="width:0%"></span></div>
+    <div class="next-hint" id="nextHint">—</div>
+  </div>
+
+  <div class="steps" id="steps"></div>
+
+  <div class="footer-actions">
+    <button class="reset" onclick="resetMode()">Fortschritt für diesen Modus zurücksetzen</button>
+  </div>
+
+  <div class="tip">
+    <b>Tipp für die erste Klientin:</b> Mehr Kontakt als im Plan vorgesehen. Persönliche Notiz in jeder Mail, proaktive WhatsApp-Check-ins, handgeschriebene Karte im Paket. Alles dokumentieren in Notion — das wird die Vorlage für alle künftigen Klienten. Den vollständigen Onboarding-Plan findest du in Notion unter „🎯 Klienten-Onboarding-Plan".
+  </div>
+</div>
+</div><!-- /#app -->
+
+<script>
+const STEPS = {
+  fast: [
+    { kind:'do', title:'Begrüßung & Ablauf', tool:'BM-Mail-App → ✍️ Individuelle Nachricht',
+      action:'Freitext-Mail: Freude über die Zusage, kurzer Ausblick auf den Ablauf, Ankündigung dass Vertrag + Zahlungslink folgen.',
+      detail:['Tab „📧 Mails" → Template „✍️ Individuelle Nachricht"','Anrede + Freitext, Betreff oben eintragen','Optional: kein Button nötig — reine Begrüßung'] },
+    { kind:'do', title:'Vertrag senden', tool:'DocuSign (Web-UI)',
+      action:'Coaching-Vertrag (Metabolic Deep-Dive, 990 €) ausfüllen und an die Patientin senden.',
+      detail:['Vertrag-PDF aus Google Drive im DocuSign-Template','Programm: Metabolic Deep-Dive 4 Wochen ankreuzen','Widerrufsbelehrung-Checkbox aktiv','Begleitende kurze WhatsApp: „Gleich kommt der Vertrag"'] },
+    { kind:'wait', title:'Warten: Vertrag unterschrieben', tool:'DocuSign-Benachrichtigung',
+      waitfor:'Du wartest auf die DocuSign-Notification „signed". Erst dann kommt der Zahlungslink.',
+      detail:['Vertrag-PDF danach im Klienten-Drive-Ordner ablegen'] },
+    { kind:'do', title:'Zahlungslink senden', tool:'BM-Mail-App → 💳 Zahlungslink',
+      action:'Template „Zahlungslink", Quick-Pick „Deep-Dive 990 €". Persönliche Notiz dazu.',
+      detail:['Quick-Pick „Deep-Dive" füllt Programm + Link automatisch','Persönliche Notiz: „Sobald die Zahlung da ist, melde ich mich mit dem Termin"'] },
+    { kind:'wait', title:'Warten: Zahlung eingegangen', tool:'Stripe-Dashboard',
+      waitfor:'Du wartest auf den Zahlungseingang (990 €). Stripe schickt der Patientin automatisch die Rechnung.',
+      detail:['Stripe-Dashboard auf Eingang prüfen','Rechnungs-PDF einmal selbst gegenchecken (Adresse, Steuerausweis)'] },
+    { kind:'do', title:'Willkommen + Termin', tool:'BM-Mail-App → Willkommen / Freitext',
+      action:'Willkommens-Mail mit Termin fürs Einführungsgespräch (Zoom, 60 Min). Termin vorher per WhatsApp abstimmen.',
+      detail:['Template „Willkommen" oder Freitext','Termin Tag/Datum/Uhrzeit eintragen','Persönlicher Ton'] },
+    { kind:'do', title:'Onboarding-Paket', tool:'Post / persönliche Übergabe',
+      action:'Paket packen: 2× CGM-Sensoren, Quick-Start-Guide, handgeschriebene Karte, Visitenkarte, kleiner Bonus.',
+      detail:['2× FreeStyle Libre 3 Plus (deckt 4 Wochen)','CGM Quick-Start Guide ausgedruckt','Handgeschriebene Willkommenskarte','Kleiner Bonus (Tee, Schokolade, Notizbuch)'] },
+    { kind:'do', title:'Einführungsgespräch', tool:'Zoom (60 Min) + Praxis',
+      action:'Anamnese durchgehen, SECA + Biovis-Labor in Praxis terminieren, CGM live anlegen, WhatsApp einrichten, Plan vorstellen.',
+      detail:['Anamnese + ärztliche Perspektive','SECA-Messung + Biovis-Blutabnahme terminieren','CGM erklären + ersten Sensor anlegen','WhatsApp Business einrichten','Plan W1–4 vorstellen, Erwartungsmanagement'] },
+    { kind:'do', title:'Programm Woche 1–4', tool:'Zoom + WhatsApp',
+      action:'Wöchentlicher Coaching-Call + proaktive WhatsApp-Check-ins. Ergebnisse tracken, Plan anpassen.',
+      detail:['1 Call/Woche (45–60 Min)','Bei Erst-Klientin: tägliche kurze WhatsApp-Reflexion','Call-Notizen in Notion dokumentieren','Upgrade-Pitch ab W2 sanft einweben'] },
+    { kind:'do', title:'Abschluss + Upgrade', tool:'Zoom (60 Min)',
+      action:'Ergebnisse reviewen, Upgrade auf Vollprogramm (2.000 €) anbieten, Testimonial + Empfehlung anfragen.',
+      detail:['CGM/Labor/SECA Vorher-Nachher','Option: Upgrade Vollprogramm (Anrechnung 990 €)','Testimonial-Anfrage','Empfehlungs-Frage stellen'] },
+  ],
+  standard: [
+    { kind:'do', title:'Anfrage über Homepage', tool:'Kontaktformular → e0a Auto-Reply',
+      action:'Patient füllt Kontaktformular aus, bekommt automatisch die Bestätigungs-Mail (e0a).',
+      detail:['Läuft automatisch über contact.mts','Du bekommst die Anfrage per Mail'] },
+    { kind:'do', title:'Fragebogen-Einladung', tool:'BM-Mail-App → 📋 Fragebogen-Einladung',
+      action:'Tab „Fragebogen-Einladung", Anrede + persönliche Notiz, versenden. Schickt e0b mit JWT-Link.',
+      detail:['JWT-Link 14 Tage gültig','Persönliche Notiz nicht vergessen'] },
+    { kind:'wait', title:'Warten: Fragebogen ausgefüllt', tool:'Notion-DB',
+      waitfor:'Antworten landen in der Notion-DB „Bright Medical · Fragebögen" + Mail an dich.',
+      detail:['Antworten reviewen','Status auf „In Bearbeitung" setzen','Anamnese-Notizen vorbereiten'] },
+    { kind:'do', title:'Erstgespräch', tool:'Zoom (20 Min)',
+      action:'Kennenlernen + Qualifizierung + Programmvorstellung + Preis. Bei Zusage → weiter zum Vertrag.',
+      detail:['Ziele besprechen','Programm + Investition transparent erklären','Bei Zusage: Vertrag ankündigen'] },
+    { kind:'do', title:'Vertrag senden', tool:'DocuSign (Web-UI)',
+      action:'Coaching-Vertrag (passendes Programm) ausfüllen und senden.',
+      detail:['Programm ankreuzen','Widerrufsbelehrung aktiv'] },
+    { kind:'wait', title:'Warten: Vertrag unterschrieben', tool:'DocuSign-Benachrichtigung',
+      waitfor:'Auf DocuSign-Notification „signed" warten, dann Zahlungslink.',
+      detail:['Vertrag im Klienten-Drive-Ordner ablegen'] },
+    { kind:'do', title:'Zahlungslink senden', tool:'BM-Mail-App → 💳 Zahlungslink',
+      action:'Template „Zahlungslink", passendes Programm per Quick-Pick.',
+      detail:['Quick-Pick wählen','Persönliche Notiz dazu'] },
+    { kind:'wait', title:'Warten: Zahlung eingegangen', tool:'Stripe-Dashboard',
+      waitfor:'Auf Zahlungseingang warten. Rechnung geht automatisch raus.',
+      detail:['Stripe-Dashboard prüfen','Rechnung gegenchecken'] },
+    { kind:'do', title:'Willkommen + Termin', tool:'BM-Mail-App → Willkommen',
+      action:'Willkommens-Mail mit Einführungsgespräch-Termin.',
+      detail:['Termin abstimmen','Persönlicher Ton'] },
+    { kind:'do', title:'Onboarding-Paket', tool:'Post',
+      action:'Sensoren, Guide, Karte, Bonus packen + versenden.',
+      detail:['CGM-Sensoren je nach Programm','Handgeschriebene Karte'] },
+    { kind:'do', title:'Einführungsgespräch', tool:'Zoom (60 Min) + Praxis',
+      action:'Anamnese, Diagnostik terminieren, CGM, WhatsApp, Plan.',
+      detail:['SECA + Biovis','CGM anlegen','WhatsApp Business'] },
+    { kind:'do', title:'Programm + Abschluss', tool:'Zoom + WhatsApp',
+      action:'Wöchentliche Calls, dann Abschlussgespräch mit Upgrade/Testimonial.',
+      detail:['Calls + WhatsApp','Call-Notizen in Notion','Abschluss: Upgrade + Testimonial'] },
+  ],
+};
+
+let mode = localStorage.getItem('bm_wf_mode') || 'fast';
+
+function storeKey(m){ return 'bm_wf_done_' + m; }
+function getDone(m){ try { return JSON.parse(localStorage.getItem(storeKey(m)) || '[]'); } catch { return []; } }
+function setDone(m, arr){ localStorage.setItem(storeKey(m), JSON.stringify(arr)); }
+
+function setMode(m){
+  mode = m;
+  localStorage.setItem('bm_wf_mode', m);
+  document.querySelectorAll('.modebtn').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
+  render();
+}
+
+function resetMode(){
+  if (!confirm('Fortschritt für diesen Modus wirklich zurücksetzen?')) return;
+  setDone(mode, []);
+  render();
+}
+
+function toggleStep(idx){
+  const done = getDone(mode);
+  const pos = done.indexOf(idx);
+  if (pos >= 0) done.splice(pos, 1); else done.push(idx);
+  setDone(mode, done);
+  render();
+}
+
+function toggleOpen(idx){
+  const el = document.querySelector('.step[data-i="'+idx+'"]');
+  if (el) el.classList.toggle('open');
+}
+
+function render(){
+  const steps = STEPS[mode];
+  const done = getDone(mode);
+  const total = steps.length;
+  const doneN = done.length;
+  const firstOpen = steps.findIndex((_, i) => !done.includes(i));
+
+  document.getElementById('doneCount').textContent = doneN;
+  document.getElementById('totalCount').textContent = total;
+  document.getElementById('barFill').style.width = Math.round(doneN/total*100) + '%';
+
+  const hint = document.getElementById('nextHint');
+  if (doneN >= total) {
+    hint.innerHTML = '✅ <b>Alle Schritte erledigt.</b> Stark gemacht!';
+  } else {
+    const s = steps[firstOpen];
+    const verb = s.kind === 'wait' ? 'Jetzt warten auf' : 'Dein nächster Schritt';
+    hint.innerHTML = verb + ': <b>' + s.title + '</b> · ' + s.tool;
+  }
+
+  const container = document.getElementById('steps');
+  container.innerHTML = '';
+  steps.forEach((s, i) => {
+    const isDone = done.includes(i);
+    const isCurrent = !isDone && i === firstOpen;
+    const div = document.createElement('div');
+    div.className = 'step' + (isDone ? ' done' : '') + (isCurrent ? ' current' : '');
+    div.dataset.i = i;
+
+    const detailList = (s.detail || []).map(d => '<li>'+d+'</li>').join('');
+    const actionBox = s.kind === 'wait'
+      ? '<div class="waitfor">⏳ ' + s.waitfor + '</div>'
+      : '<div class="doaction">▶︎ ' + s.action + '</div>';
+
+    div.innerHTML =
+      '<div class="step-head" onclick="toggleOpen('+i+')">' +
+        '<div class="dot">' + (isDone ? '✓' : (i+1)) + '</div>' +
+        '<div class="step-main">' +
+          '<span class="step-kind ' + (s.kind==='wait'?'kind-wait':'kind-do') + '">' + (s.kind==='wait'?'Warten':'Aktion') + '</span>' +
+          '<div class="step-title">' + s.title + '</div>' +
+          '<div class="step-tool">' + s.tool + '</div>' +
+        '</div>' +
+        '<div class="chev">›</div>' +
+      '</div>' +
+      '<div class="step-body">' +
+        actionBox +
+        (detailList ? '<ul>'+detailList+'</ul>' : '') +
+        '<button class="toggle-done" onclick="toggleStep('+i+')">' + (isDone ? '✓ Erledigt — rückgängig' : 'Als erledigt markieren') + '</button>' +
+      '</div>';
+    container.appendChild(div);
+  });
+
+  document.querySelectorAll('.modebtn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+}
+
+// --- Access gate: shared secret = same Bearer token as the Mail-App (bm_send_token) ---
+const TOKEN_KEY = 'bm_send_token';
+
+async function verifyToken(token) {
+  // POST an empty body: a valid token returns 400 (bad input), a wrong token returns 401.
+  try {
+    const r = await fetch(window.location.origin + '/.netlify/functions/send-mail', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: '{}',
+    });
+    return r.status !== 401;
+  } catch {
+    return false;
+  }
+}
+
+function showApp() {
+  document.getElementById('gate').style.display = 'none';
+  document.getElementById('app').style.display = '';
+  render();
+}
+
+async function unlock() {
+  const v = document.getElementById('gateInput').value.trim();
+  const err = document.getElementById('gateErr');
+  const btn = document.getElementById('gateBtn');
+  if (!v) { err.textContent = 'Bitte Geheimnis eingeben.'; return; }
+  btn.disabled = true; btn.textContent = 'Prüfe…'; err.textContent = '';
+  const ok = await verifyToken(v);
+  btn.disabled = false; btn.textContent = 'Entsperren';
+  if (ok) {
+    localStorage.setItem(TOKEN_KEY, v);
+    showApp();
+  } else {
+    err.textContent = 'Falsches Geheimnis. Bitte erneut versuchen.';
+  }
+}
+
+// Enter key submits the gate
+document.getElementById('gateInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') unlock();
+});
+
+// On load: if a token is already stored (e.g. from the Mail-App), open directly.
+(function initGate() {
+  const t = localStorage.getItem(TOKEN_KEY);
+  if (t) { showApp(); }
+  else { document.getElementById('gateInput').focus(); }
+})();
+</script>
+</body>
+</html>
