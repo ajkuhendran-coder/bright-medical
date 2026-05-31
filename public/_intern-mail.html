@@ -386,6 +386,21 @@ const TEMPLATES = {
       { key: 'PREHEADER', label: 'Vorschautext im Postfach (optional)', default: 'Schön, dass Sie dabei sind — hier die nächsten Schritte.' },
     ],
   },
+  'invite-vereinbarung': {
+    label: '📄 Coaching-Vertrag senden (Online-Bestätigung)',
+    endpoint: '/.netlify/functions/invite-vereinbarung',
+    fields: [
+      { key: 'paket', label: 'Paket', default: 'vollprogramm', options: [
+        { value: 'vollprogramm', text: 'Vollprogramm — 2.990 €' },
+        { value: 'deepdive', text: 'Metabolic Deep-Dive — 990 €' },
+        { value: 'raten', text: 'Vollprogramm Ratenzahlung — 3 × 997 €' },
+        { value: 'upgrade', text: 'Upgrade Deep-Dive → Vollprogramm — 2.000 €' },
+      ] },
+      { key: 'anrede', label: 'Anrede / Begrüßung', default: 'Liebe Frau …,' },
+      { key: 'name', label: 'Name (Vorbefüllung auf der Bestätigungs-Seite)', default: '' },
+      { key: 'personalNote', label: 'Persönliche Notiz (optional)', default: '', textarea: true, hint: 'Optionaler kursiver Block in der Einladungs-Mail.' },
+    ],
+  },
   'e1h-telefon-nachfrage': {
     label: '📞 Telefonnummer erfragen',
     fields: [
@@ -571,7 +586,15 @@ function buildField(f) {
   wrap.appendChild(label)
 
   let input
-  if (f.textarea) {
+  if (f.options) {
+    input = document.createElement('select')
+    f.options.forEach((o) => {
+      const opt = document.createElement('option')
+      opt.value = o.value
+      opt.textContent = o.text
+      input.appendChild(opt)
+    })
+  } else if (f.textarea) {
     input = document.createElement('textarea')
   } else {
     input = document.createElement('input')
@@ -579,7 +602,8 @@ function buildField(f) {
   }
   input.id = 'var_' + f.key
   input.dataset.varKey = f.key
-  input.value = f.default || ''
+  if (f.default) input.value = f.default
+  else if (!f.options) input.value = ''
   wrap.appendChild(input)
 
   if (f.hint) {
@@ -711,15 +735,28 @@ async function send() {
     vars[el.dataset.varKey] = el.value
   })
 
+  const cfg = TEMPLATES[tpl]
+  // Spezial-Aktionen mit eigenem Endpoint (z.B. Vertrag-Einladung) gehen NICHT über send-mail.
+  const useEndpoint = !!cfg.endpoint
+  const url = useEndpoint ? (window.location.origin + cfg.endpoint) : API_URL
+  let body
+  if (useEndpoint) {
+    body = { to }
+    if (vars.paket) body.paket = vars.paket
+    if (vars.anrede) body.anrede = vars.anrede
+    if (vars.name) body.name = vars.name
+    if (vars.personalNote) body.personalNote = vars.personalNote
+  } else {
+    body = { template: tpl, to, vars }
+    if (subject) body.subject = subject
+  }
+
   $('sendBtn').disabled = true
   $('sendBtn').textContent = 'Sende…'
-  showStatus('', 'Versand läuft…', 'Anfrage an ' + API_URL)
-
-  const body = { template: tpl, to, vars }
-  if (subject) body.subject = subject
+  showStatus('', useEndpoint ? 'Einladung wird erstellt…' : 'Versand läuft…', 'Anfrage an ' + url)
 
   try {
-    const res = await fetch(API_URL, {
+    const res = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -729,7 +766,9 @@ async function send() {
     })
     const data = await res.json().catch(() => ({}))
     if (res.ok && data.ok) {
-      showStatus('ok', '✓ Versendet', 'Template <strong>' + data.template + '</strong> ist an <strong>' + data.to + '</strong> versendet.<div class="small">Subject: ' + (data.subject || '–') + '<br>Resend message id: ' + data.messageId + '</div>')
+      const linkHtml = data.link ? '<code class="link">' + data.link + '</code>' : ''
+      const validHtml = data.expHuman ? 'Gültig bis ' + data.expHuman + '<br>' : ''
+      showStatus('ok', '✓ Versendet', (useEndpoint ? 'Vertrag-Einladung' : ('Template <strong>' + (data.template || tpl) + '</strong>')) + ' an <strong>' + data.to + '</strong> versendet.<div class="small">' + validHtml + 'Subject: ' + (data.subject || '–') + '<br>Resend message id: ' + data.messageId + '</div>' + linkHtml)
       pushHistory({ at: Date.now(), ok: true, template: tpl, to })
     } else if (res.status === 401) {
       showStatus('err', '✗ Token abgelehnt', 'Bearer-Token ist falsch oder abgelaufen. Bitte ändern.')
