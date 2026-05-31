@@ -2,6 +2,7 @@ import { Resend } from 'resend'
 import type { Context } from '@netlify/functions'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
+import { notifyCC } from './_shared/notify-cc.ts'
 
 const ADMIN_EMAIL = 'info@brightmedical.de'
 const FROM_EMAIL = 'Bright Medical <noreply@brightmedical.de>'
@@ -157,6 +158,15 @@ export default async (req: Request, _context: Context) => {
       to: email,
       subject: 'Ihre Anfrage ist bei uns angekommen',
       html: renderE0a(safeFirstName),
+    })
+
+    // 3. Notify Command Center (best-effort, errors swallowed by helper)
+    await notifyCC({
+      event: 'bm.lead.captured',
+      email,
+      name,
+      phone: phone || undefined,
+      data: { message, ip },
     })
 
     return new Response(JSON.stringify({ success: true }), { status: 200 })
