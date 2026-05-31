@@ -72,6 +72,85 @@ export function verifyFragebogenToken(token: string, secret: string): VerifyResu
   return { ok: true, payload }
 }
 
+// --- Vereinbarung-Token (Coaching-Vertrag gegenzeichnen, nach Zahlung) ---
+// Carries the chosen package (label + price) + optional name prefill inside the
+// signed payload, so the /vereinbarung page stays stateless.
+
+export type VereinbarungPayload = {
+  sub: string             // client email
+  iat: number
+  exp: number
+  scope: 'vereinbarung'
+  subjectId?: string      // CC reference
+  paketKey: string        // 'deepdive' | 'vollprogramm' | 'raten' | 'upgrade'
+  paketLabel: string      // human label, e.g. "Bright Medical Vollprogramm — 12 Wochen"
+  paketPreis: string      // display price, e.g. "2.990 €"
+  name?: string           // optional prefill ("Aslihan Özmen")
+}
+
+export function signVereinbarungToken(
+  email: string,
+  paket: { key: string; label: string; preis: string },
+  opts: { subjectId?: string; name?: string },
+  ttlDays: number,
+  secret: string,
+): string {
+  const now = Date.now()
+  const payload: VereinbarungPayload = {
+    sub: email.toLowerCase().trim(),
+    iat: now,
+    exp: now + ttlDays * 24 * 60 * 60 * 1000,
+    scope: 'vereinbarung',
+    ...(opts.subjectId ? { subjectId: opts.subjectId } : {}),
+    paketKey: paket.key,
+    paketLabel: paket.label,
+    paketPreis: paket.preis,
+    ...(opts.name ? { name: opts.name } : {}),
+  }
+  const payloadB64 = b64urlEncode(JSON.stringify(payload))
+  const sig = createHmac('sha256', secret).update(payloadB64).digest()
+  const sigB64 = b64urlEncode(sig)
+  return `${payloadB64}.${sigB64}`
+}
+
+export type VerifyVereinbarungResult =
+  | { ok: true; payload: VereinbarungPayload }
+  | { ok: false; reason: 'malformed' | 'badSignature' | 'expired' | 'wrongScope' }
+
+export function verifyVereinbarungToken(token: string, secret: string): VerifyVereinbarungResult {
+  if (!token || typeof token !== 'string' || !token.includes('.')) {
+    return { ok: false, reason: 'malformed' }
+  }
+  const [payloadB64, sigB64] = token.split('.')
+  if (!payloadB64 || !sigB64) return { ok: false, reason: 'malformed' }
+
+  const expectedSig = createHmac('sha256', secret).update(payloadB64).digest()
+  let providedSig: Buffer
+  try {
+    providedSig = b64urlDecode(sigB64)
+  } catch {
+    return { ok: false, reason: 'malformed' }
+  }
+  if (providedSig.length !== expectedSig.length || !timingSafeEqual(providedSig, expectedSig)) {
+    return { ok: false, reason: 'badSignature' }
+  }
+
+  let payload: VereinbarungPayload
+  try {
+    payload = JSON.parse(b64urlDecode(payloadB64).toString('utf8'))
+  } catch {
+    return { ok: false, reason: 'malformed' }
+  }
+  if (payload.scope !== 'vereinbarung') return { ok: false, reason: 'wrongScope' }
+  if (typeof payload.exp !== 'number' || payload.exp < Date.now()) {
+    return { ok: false, reason: 'expired' }
+  }
+  if (!payload.paketKey || !payload.paketLabel) {
+    return { ok: false, reason: 'malformed' }
+  }
+  return { ok: true, payload }
+}
+
 export function tokenIdShort(token: string): string {
   // First 8 chars of the signature — for audit logging.
   const dot = token.indexOf('.')
