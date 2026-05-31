@@ -1,4 +1,6 @@
 User-agent: *
 Allow: /
+Disallow: /_intern-mail.html
+Disallow: /_workflow.html
 
 Sitemap: https://brightmedical.de/sitemap.xml

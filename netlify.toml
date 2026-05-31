@@ -4,7 +4,10 @@
 
 [functions]
   directory = "netlify/functions"
-  included_files = ["email-templates/**/*.html"]
+  included_files = [
+    "email-templates/**/*.html",
+    "email-templates/_assets/**",
+  ]
 
 [[headers]]
   for = "/*"

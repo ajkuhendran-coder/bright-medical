@@ -2,6 +2,7 @@ import Hero from '../components/sections/Hero'
 import TrustBar from '../components/sections/TrustBar'
 import PainPoints from '../components/sections/PainPoints'
 import Approach from '../components/sections/Approach'
+import ScopeDefinition from '../components/sections/ScopeDefinition'
 import AboutMe from '../components/sections/AboutMe'
 import Testimonials from '../components/sections/Testimonials'
 import Programs from '../components/sections/Programs'
@@ -21,6 +22,7 @@ export default function Home() {
       <TrustBar />
       <PainPoints />
       <Approach />
+      <ScopeDefinition />
       <AboutMe />
       <Testimonials />
       <Programs />

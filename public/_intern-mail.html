@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="robots" content="noindex,nofollow" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="BM Mail" />
+<meta name="theme-color" content="#0B2040" />
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon-180.png" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<title>Bright Medical · Mail-Versand</title>
+<style>
+  :root {
+    --navy: #0B2040;
+    --navy-2: #14325C;
+    --ink: #0A2540;
+    --cyan: #00B8D4;
+    --cyan-deep: #0099B3;
+    --cream: #F6F8FA;
+    --ice: #EAF3F7;
+    --line: #E3E8EE;
+    --muted: #5A6A80;
+    --ok: #047857;
+    --err: #b91c1c;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+    background: var(--cream);
+    color: var(--ink);
+    min-height: 100vh;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  .wrap {
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 16px 16px 80px;
+  }
+  header {
+    background: var(--navy);
+    color: #fff;
+    margin: -16px -16px 16px;
+    padding: 24px 20px;
+    border-radius: 0 0 16px 16px;
+  }
+  header h1 {
+    margin: 0;
+    font-family: 'Fraunces', Georgia, serif;
+    font-weight: 500;
+    font-size: 26px;
+    letter-spacing: -0.5px;
+  }
+  header .sub {
+    font-size: 11px;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+    color: var(--cyan);
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  header .meta {
+    margin-top: 12px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.6);
+  }
+  .card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+  .card.ok { border-color: #a7f3d0; background: #ecfdf5; color: var(--ok); }
+  .card.err { border-color: #fecaca; background: #fef2f2; color: var(--err); }
+  .card h2 {
+    margin: 0 0 12px;
+    font-size: 11px;
+    letter-spacing: 2.2px;
+    text-transform: uppercase;
+    color: var(--cyan);
+    font-weight: 600;
+  }
+  label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    margin: 12px 0 4px;
+    letter-spacing: 0.3px;
+  }
+  label:first-child { margin-top: 0; }
+  input, select, textarea {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 16px;
+    color: var(--ink);
+    background: #fff;
+    -webkit-appearance: none;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: 2px solid var(--cyan);
+    outline-offset: -2px;
+    border-color: var(--cyan);
+  }
+  textarea {
+    min-height: 90px;
+    font-family: inherit;
+    line-height: 1.5;
+    resize: vertical;
+  }
+  .row { display: grid; gap: 8px; grid-template-columns: 1fr 1fr; }
+  .row label { margin-top: 0; }
+  .btn {
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(180deg, var(--cyan) 0%, var(--cyan-deep) 100%);
+    color: #fff;
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,184,212,0.25);
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn.secondary {
+    background: #fff;
+    color: var(--ink);
+    border: 1.5px solid var(--ink);
+    box-shadow: none;
+    margin-bottom: 8px;
+  }
+  .btn-row { display: grid; gap: 8px; margin-top: 16px; }
+  .help {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+    line-height: 1.45;
+  }
+  .pill {
+    display: inline-block;
+    padding: 2px 10px;
+    background: var(--ice);
+    color: var(--cyan-deep);
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+  }
+  .pill.gone { background: #f3f4f6; color: var(--muted); }
+  .token-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .token-row button {
+    background: none;
+    border: none;
+    color: var(--cyan-deep);
+    font-size: 13px;
+    cursor: pointer;
+    padding: 6px;
+    font-weight: 600;
+  }
+  #status { display: none; font-size: 14px; line-height: 1.5; }
+  #status.show { display: block; }
+  #status .small { font-size: 11px; opacity: 0.75; margin-top: 4px; word-break: break-all; }
+  ul.history {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-size: 13px;
+  }
+  ul.history li {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+    color: var(--muted);
+  }
+  ul.history li:last-child { border-bottom: none; }
+  ul.history .who { color: var(--ink); }
+  ul.history .when { font-variant-numeric: tabular-nums; font-size: 12px; }
+  ul.history .empty { padding: 12px 0; color: var(--muted); }
+  .hidden { display: none !important; }
+  .tabs {
+    display: flex; gap: 4px; margin-bottom: 16px;
+    background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 4px;
+  }
+  .tab {
+    flex: 1; padding: 10px 14px; border: none; background: transparent;
+    font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+    border-radius: 8px; color: var(--muted); letter-spacing: 0.2px;
+  }
+  .tab.active { background: var(--navy); color: #fff; }
+  code.link {
+    display: block; word-break: break-all; padding: 10px 12px;
+    background: var(--cream); border: 1px solid var(--line); border-radius: 8px;
+    font-family: ui-monospace, SF Mono, Menlo, monospace; font-size: 11px;
+    color: var(--ink); margin-top: 6px;
+  }
+  .quickpick {
+    display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;
+  }
+  .quickpick button {
+    flex: 1; min-width: 120px; padding: 10px 14px; border: 1.5px solid var(--line);
+    background: #fff; color: var(--ink); border-radius: 10px; cursor: pointer;
+    font-family: inherit; font-size: 12px; font-weight: 600; letter-spacing: 0.2px;
+    line-height: 1.3;
+  }
+  .quickpick button:hover { border-color: var(--cyan); }
+  .quickpick button.active { background: var(--cyan); color: #fff; border-color: var(--cyan); }
+  .quickpick .price { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; font-weight: 500; }
+  .quickpick button.active .price { color: rgba(255,255,255,0.85); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="sub">Intern · nur für Dr. Kuhendran</div>
+  <h1>Mail-Versand</h1>
+  <div class="meta">brightmedical.de/.netlify/functions/send-mail</div>
+</header>
+
+<!-- Token-Setup (nur bei erstem Besuch sichtbar) -->
+<div class="card" id="tokenSetup">
+  <h2>Bearer-Token</h2>
+  <label for="tokenInput">Token aus <code>.secrets/BRIGHT_SEND_SECRET.txt</code> einfügen</label>
+  <input type="password" id="tokenInput" autocomplete="off" placeholder="bm_…" />
+  <div class="help">Wird lokal im Browser gespeichert (nicht auf dem Server). Bei Geräte-Wechsel: erneut eintippen.</div>
+  <div class="btn-row">
+    <button class="btn" type="button" onclick="saveToken()">Token speichern</button>
+  </div>
+</div>
+
+<!-- Token-Info (wenn Token gesetzt) -->
+<div class="card hidden" id="tokenInfo">
+  <div class="token-row">
+    <div><span class="pill">Token</span> <span id="tokenStatus">aktiv</span></div>
+    <button onclick="resetToken()">Ändern</button>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs hidden" id="tabs">
+  <button class="tab active" data-mode="mail" onclick="switchMode('mail')">📧 Mails</button>
+  <button class="tab" data-mode="invite" onclick="switchMode('invite')">📋 Fragebogen</button>
+</div>
+
+<!-- Einladungs-Formular -->
+<div class="card hidden" id="inviteForm">
+  <h2>Fragebogen-Einladung</h2>
+
+  <label for="inviteTo">Empfänger-E-Mail</label>
+  <input type="email" id="inviteTo" autocomplete="email" placeholder="patient@example.com" />
+
+  <label for="inviteAnrede">Anrede für die Mail (optional)</label>
+  <input type="text" id="inviteAnrede" placeholder="z.B. Frau Müller" />
+  <div class="help">Erscheint in der Mail-Headline. Bei leer: „liebe Interessentin / lieber Interessent".</div>
+
+  <label for="inviteNote">Persönliche Notiz (optional)</label>
+  <textarea id="inviteNote" placeholder="Optional, wird als kursiver Block in die Mail eingebettet."></textarea>
+
+  <div class="btn-row">
+    <button class="btn" type="button" onclick="sendInvite()" id="inviteBtn">Einladung versenden</button>
+  </div>
+</div>
+
+<!-- Versand-Formular -->
+<div class="card hidden" id="form">
+  <h2>Mail vorbereiten</h2>
+
+  <label for="template">Template</label>
+  <select id="template" onchange="renderFields()"></select>
+
+  <label for="to">Empfänger-E-Mail</label>
+  <input type="email" id="to" autocomplete="email" placeholder="klientin@example.com" />
+  <div class="btn-row" style="margin-top:6px;margin-bottom:0;">
+    <button class="btn secondary" type="button" onclick="setTestRecipient()">Test an mich (kuhendran@me.com)</button>
+  </div>
+
+  <div id="varsContainer"></div>
+
+  <label for="subject">Betreff (optional, sonst Template-Default)</label>
+  <input type="text" id="subject" placeholder="leer lassen für Default" />
+
+  <div class="btn-row">
+    <button class="btn" type="button" onclick="send()" id="sendBtn">Senden</button>
+  </div>
+</div>
+
+<!-- Status -->
+<div class="card" id="status">
+  <h2 id="statusTitle">Status</h2>
+  <div id="statusBody"></div>
+</div>
+
+<!-- History -->
+<div class="card" id="historyCard">
+  <h2>Letzte Versendungen</h2>
+  <ul class="history" id="history"><li class="empty">noch keine</li></ul>
+</div>
+
+</div>
+
+<script>
+// Same-origin: API URL is computed from where the page itself is served.
+// Works for preview deploys (random subdomain) AND production (brightmedical.de)
+// without any CORS handshake.
+const API_URL = window.location.origin + '/.netlify/functions/send-mail'
+const STORAGE_TOKEN = 'bm_send_token'
+const STORAGE_HISTORY = 'bm_send_history'
+const STORAGE_TEST = 'bm_send_test_recipient'
+
+// --- Templates registry (mirrors send-mail.mts; keep in sync) ---
+const TEMPLATES = {
+  'e-frei': {
+    label: '✍️ Individuelle Nachricht (Freitext)',
+    fields: [
+      { key: 'ANREDE', label: 'Anrede / Begrüßung', default: 'Liebe Frau Müller,' },
+      { key: 'BODY', label: 'Nachrichtentext', default: '', textarea: true, hint: 'Frei schreiben. Leerzeile = neuer Absatz. Wird automatisch ins BM-Design eingebettet (Logo, Signatur, Footer kommen von selbst).' },
+      { key: 'CTA_LABEL', label: 'Button-Text (optional)', default: '', short: true, hint: 'z.B. „Zum Vertrag". Leer = kein Button.' },
+      { key: 'CTA_LINK', label: 'Button-Link (optional)', default: '', short: true },
+      { key: 'HINWEIS', label: 'Hinweis-Kasten (optional, hellblau hervorgehoben)', default: '', textarea: true, hint: 'Optionaler hervorgehobener Hinweis-Block. Leer = kein Kasten.' },
+      { key: 'PREHEADER', label: 'Vorschautext im Postfach (optional)', default: 'Eine persönliche Nachricht von Bright Medical.' },
+    ],
+  },
+  'e1b-reminder-erstgespraech': {
+    label: '24h-Reminder Erstgespräch',
+    fields: [
+      { key: 'ANREDE_KURZ', label: 'Anrede (Frau Müller)', default: 'Frau Bechtel' },
+      { key: 'WOCHENTAG', label: 'Wochentag (DONNERSTAG)', default: 'DONNERSTAG' },
+      { key: 'WOCHENTAG_KURZ', label: 'Wochentag kurz (Do)', default: 'Do', short: true },
+      { key: 'DATUM_KURZ', label: 'Datum kurz (30.04.)', default: '30.04.', short: true },
+      { key: 'TAG_MONAT', label: 'Tag · Monat (30. APRIL)', default: '30. APRIL' },
+      { key: 'JAHR', label: 'Jahr', default: '2026', short: true },
+      { key: 'UHRZEIT', label: 'Uhrzeit (13:15)', default: '13:15', short: true },
+      { key: 'DAUER', label: 'Dauer (20 Minuten)', default: '20 Minuten' },
+      { key: 'TELEFON_HINWEIS', label: 'Telefon-Hinweis', default: 'Bitte antworten Sie mir kurz mit der Telefonnummer, unter der ich Sie morgen erreichen kann.', textarea: true, hint: 'z.B. „Ich rufe Sie an unter +49…", wenn die Nummer schon bekannt ist.' },
+      { key: 'PERSÖNLICHE_NOTIZ', label: 'Persönliche Notiz (kursiv in der Mail)', default: 'Liebe Frau Bechtel, ich freue mich sehr auf unser Gespräch morgen. Bringen Sie ruhig auch alle Fragen mit, die Ihnen zwischendurch gekommen sind, wir nehmen uns die Zeit.', textarea: true },
+    ],
+  },
+  'e1a-welcome': {
+    label: 'Willkommen nach Erstgespräch-Buchung',
+    fields: [
+      { key: 'ANREDE_KURZ', label: 'Anrede', default: 'Frau Becker' },
+      { key: 'TERMIN_TAG', label: 'Tag (Zahl)', default: '5', short: true },
+      { key: 'TERMIN_MONAT_KURZ', label: 'Monat kurz (MAI)', default: 'MAI', short: true },
+      { key: 'TERMIN_WOCHENTAG_KURZ', label: 'Wochentag kurz (DI)', default: 'DI', short: true },
+      { key: 'TERMIN_DAUER', label: 'Termin-Dauer', default: '20 min' },
+      { key: 'TERMIN_UHRZEIT', label: 'Uhrzeit', default: '14:30', short: true },
+      { key: 'TERMIN_FORMAT', label: 'Format', default: 'Telefongespräch' },
+    ],
+  },
+  'e1c-reminder-folgetermin': {
+    label: '24h-Reminder Folgetermin',
+    fields: [
+      { key: 'TERMIN_TYP', label: 'Termin-Typ', default: 'Coaching-Call' },
+      { key: 'HEADLINE', label: 'Headline', default: 'Ihr nächster Coaching-Call.' },
+      { key: 'WOCHENTAG', label: 'Wochentag (DONNERSTAG)', default: 'DONNERSTAG' },
+      { key: 'TAG_MONAT', label: 'Tag · Monat', default: '7. MAI' },
+      { key: 'JAHR', label: 'Jahr', default: '2026', short: true },
+      { key: 'UHRZEIT', label: 'Uhrzeit', default: '15:00', short: true },
+      { key: 'DAUER', label: 'Dauer', default: '45 min' },
+      { key: 'ORT_LABEL', label: 'Ort-Label (Format/Ort)', default: 'Format' },
+      { key: 'ORT_PRIMARY', label: 'Ort/Format primär', default: 'Telefongespräch' },
+      { key: 'ORT_HINWEIS', label: 'Ort-Hinweis', default: 'Ich rufe Sie an unter der hinterlegten Nummer.', textarea: true },
+      { key: 'VORBEREITUNG_1', label: 'Vorbereitung 1', default: 'Halten Sie Ihr Tagebuch bereit.' },
+      { key: 'VORBEREITUNG_2', label: 'Vorbereitung 2', default: 'Notieren Sie 2–3 Themen, die Sie besprechen möchten.' },
+      { key: 'VORBEREITUNG_3', label: 'Vorbereitung 3', default: 'Aktuelle Werte (CGM, Schlaf, Gewicht), falls relevant.' },
+    ],
+  },
+  'e0a-confirmation': {
+    label: 'Bestätigung nach Anfrage (Auto-Reply, manuell hier)',
+    fields: [
+      { key: 'firstName', label: 'Vorname', default: 'Melanie' },
+    ],
+  },
+  'e3a-zahlungslink': {
+    label: '💳 Zahlungslink Stripe',
+    quickpick: [
+      {
+        label: 'Deep-Dive',
+        price: '990 €',
+        vars: {
+          PROGRAMM_NAME: 'Metabolic Deep-Dive: 4 Wochen',
+          PROGRAMM_KURZBESCHREIBUNG: '4 Wochen ärztlich begleitetes Coaching · 3 Calls · 2 CGM-Sensoren · Basis-Ernährungsplan',
+          PROGRAMM_PREIS: '990 €',
+          PROGRAMM_ZAHLUNGSMODUS: 'Einmalzahlung',
+          ZAHLUNGSLINK: 'https://buy.stripe.com/dRm6oH0wZ6gA7Qt527cQU00',
+        },
+      },
+      {
+        label: 'Vollprogramm',
+        price: '2.990 €',
+        vars: {
+          PROGRAMM_NAME: 'Bright Medical Vollprogramm: 12 Wochen',
+          PROGRAMM_KURZBESCHREIBUNG: '12 Wochen ärztlich begleitetes Coaching · 7 Calls · 6 CGM-Sensoren · individueller Plan',
+          PROGRAMM_PREIS: '2.990 €',
+          PROGRAMM_ZAHLUNGSMODUS: 'Einmalzahlung',
+          ZAHLUNGSLINK: 'https://buy.stripe.com/fZu7sL93vdJ2gmZ8ejcQU01',
+        },
+      },
+      {
+        label: 'Upgrade',
+        price: '2.000 €',
+        vars: {
+          PROGRAMM_NAME: 'Upgrade Deep-Dive → Vollprogramm',
+          PROGRAMM_KURZBESCHREIBUNG: 'Aufpreis für die Erweiterung von 4 auf 12 Wochen Coaching',
+          PROGRAMM_PREIS: '2.000 €',
+          PROGRAMM_ZAHLUNGSMODUS: 'Einmalzahlung · Anrechnung der bereits gezahlten 990€',
+          ZAHLUNGSLINK: 'https://buy.stripe.com/6oU7sLa7zgVeb2F1PVcQU02',
+        },
+      },
+    ],
+    fields: [
+      { key: 'ANREDE', label: 'Anrede', default: 'Liebe Frau Müller' },
+      { key: 'PROGRAMM_NAME', label: 'Programm-Name', default: 'Bright Medical Vollprogramm: 12 Wochen' },
+      { key: 'PROGRAMM_KURZBESCHREIBUNG', label: 'Programm-Kurzbeschreibung (eine Zeile)', default: '12 Wochen ärztlich begleitetes Coaching · 7 Calls · 6 CGM-Sensoren · individueller Plan' },
+      { key: 'PROGRAMM_PREIS', label: 'Preis (Anzeige)', default: '2.990 €', short: true },
+      { key: 'PROGRAMM_ZAHLUNGSMODUS', label: 'Zahlungsmodus (Anzeige)', default: 'Einmalzahlung', short: true },
+      { key: 'ZAHLUNGSLINK', label: 'Stripe-Zahlungslink', default: 'https://buy.stripe.com/fZu7sL93vdJ2gmZ8ejcQU01' },
+      { key: 'PERSÖNLICHE_NOTIZ', label: 'Persönliche Notiz (optional, kursiver Block)', default: '', textarea: true, hint: 'Wird als hellblauer Notiz-Block in die Mail eingefügt. Leer lassen = kein Block.' },
+    ],
+  },
+  'e10-teaser': {
+    label: 'Newsletter-Teaser (kurz)',
+    fields: [],
+  },
+  'e11-newsletter': {
+    label: 'Newsletter „Der Rundgang"',
+    fields: [
+      { key: 'PREHEADER', label: 'Pre-Header', default: 'Was uns diesen Monat beschäftigt hat.', textarea: true },
+      { key: 'AUSGABE_NUMMER', label: 'Ausgabe-Nr.', default: '01', short: true },
+      { key: 'AUSGABE_MONAT', label: 'Ausgabe-Monat', default: 'MAI 2026' },
+      { key: 'MASTHEAD_TAGLINE', label: 'Tagline', default: 'Was uns diesen Monat beschäftigt hat: Werte, Geschichten, Hintergründe.', textarea: true },
+      { key: 'INDEX_01', label: 'Index 01', default: 'Schlaf als Hebel' },
+      { key: 'INDEX_02', label: 'Index 02', default: 'Programm-Update' },
+      { key: 'INDEX_03', label: 'Index 03', default: 'Ihre Frage: Kreatin?' },
+      { key: 'INDEX_04', label: 'Index 04', default: 'Ein persönlicher Blick' },
+      { key: 'LESEZEIT', label: 'Lesezeit', default: '6 min', short: true },
+      { key: 'FEATURE_HEADLINE', label: 'Feature-Headline', default: 'Warum Schlaf der unterschätzte Hebel ist.' },
+      { key: 'FEATURE_TEASER', label: 'Feature-Teaser', default: 'Wir messen Blut, wir messen Hormone, wir tracken Schritte. Beim Schlaf hingegen vertrauen viele auf Bauchgefühl.', textarea: true },
+      { key: 'FEATURE_LINK', label: 'Feature-Link', default: 'https://brightmedical.de/blog/schlaf' },
+      { key: 'PROGRAMM_HEADLINE', label: 'Programm-Headline', default: 'Gewichtsoptimierung: Plätze für Sommer 2026.' },
+      { key: 'PROGRAMM_META', label: 'Programm-Meta', default: '12 Wochen · ärztlich begleitet · CORE 2.990€' },
+      { key: 'PROGRAMM_LINK', label: 'Programm-Link', default: 'https://brightmedical.de#programme' },
+      { key: 'TIPP_FRAGE', label: 'Tipp-Frage', default: 'Bringt Kreatin auch über 40 noch etwas?' },
+      { key: 'TIPP_ANTWORT', label: 'Tipp-Antwort', default: 'Kurz: ja, besonders dann. Kognitive Effekte, Muskelerhalt, Schlaf.', textarea: true },
+      { key: 'TIPP_LINK', label: 'Tipp-Link', default: 'https://brightmedical.de/blog/kreatin' },
+      { key: 'STAT_1_ZAHL', label: 'Stat 1 Zahl', default: '12', short: true },
+      { key: 'STAT_1_LABEL', label: 'Stat 1 Label', default: 'Erstgespräche' },
+      { key: 'STAT_2_ZAHL', label: 'Stat 2 Zahl', default: '4', short: true },
+      { key: 'STAT_2_LABEL', label: 'Stat 2 Label', default: 'aktive Klient:innen' },
+      { key: 'STAT_3_ZAHL', label: 'Stat 3 Zahl', default: '1', short: true },
+      { key: 'STAT_3_LABEL', label: 'Stat 3 Label', default: 'neuer Programmschwerpunkt' },
+      { key: 'PERSOENLICHE_NOTIZ', label: 'Persönliche Notiz', default: 'Diese Ausgabe ist die erste, entstanden zwischen Praxis-Sprechstunde und neuen Klienten-Gesprächen.', textarea: true },
+      { key: 'ABMELDE_LINK', label: 'Abmelde-Link', default: 'https://brightmedical.de/abmelden' },
+    ],
+  },
+  'e2a-program-launch': {
+    label: 'Programm-Launch-Ankündigung',
+    fields: [
+      { key: 'PREHEADER', label: 'Pre-Header', default: 'Zwölf Wochen. Strukturiert. Ärztlich begleitet.' },
+      { key: 'LAUNCH_MONAT_JAHR', label: 'Launch Monat-Jahr', default: 'MAI 2026' },
+      { key: 'PROGRAMM_NAME', label: 'Programm-Name', default: 'Longevity 2026' },
+      { key: 'PROGRAMM_HEADLINE_LINE_1', label: 'Headline Zeile 1', default: 'Longevity.' },
+      { key: 'PROGRAMM_HEADLINE_LINE_2', label: 'Headline Zeile 2 (cyan, kursiv)', default: 'Nicht länger leben.' },
+      { key: 'PROGRAMM_HEADLINE_LINE_3', label: 'Headline Zeile 3', default: 'Besser altern.' },
+      { key: 'PROGRAMM_BESCHREIBUNG', label: 'Beschreibung', default: 'Zwölf Wochen. Vollständige Diagnostik. Ärztlich begleitet.', textarea: true },
+      { key: 'CTA_LINK', label: 'CTA-Link', default: 'https://brightmedical.de#programme' },
+      { key: 'CTA_LABEL', label: 'CTA-Label', default: 'Erstgespräch vereinbaren' },
+      { key: 'CTA_HINWEIS', label: 'CTA-Hinweis', default: 'Anmeldung bis 10. Mai · Start 15. Mai' },
+      { key: 'STAT_1_ZAHL', label: 'Stat 1 Zahl', default: '12', short: true },
+      { key: 'STAT_1_LABEL', label: 'Stat 1 Label', default: 'Wochen Begleitung' },
+      { key: 'STAT_2_ZAHL', label: 'Stat 2 Zahl', default: '60+', short: true },
+      { key: 'STAT_2_LABEL', label: 'Stat 2 Label', default: 'Biomarker' },
+      { key: 'STAT_3_ZAHL', label: 'Stat 3 Zahl', default: '8', short: true },
+      { key: 'STAT_3_LABEL', label: 'Stat 3 Label', default: 'Plätze verfügbar' },
+      { key: 'ENTHALTEN_HEADLINE', label: 'Inhalt-Headline', default: 'Medizin, die zusammendenkt.' },
+      { key: 'FEATURE_1_TITEL', label: 'Feature 1 Titel', default: 'Ausführliche Diagnostik' },
+      { key: 'FEATURE_1_TEXT', label: 'Feature 1 Text', default: 'Blut, Hormone, Mikrobiom, Stoffwechsel: strukturiert ausgewertet.', textarea: true },
+      { key: 'FEATURE_2_TITEL', label: 'Feature 2 Titel', default: 'Ihr persönlicher Plan' },
+      { key: 'FEATURE_2_TEXT', label: 'Feature 2 Text', default: 'Ernährung, Bewegung, Schlaf, Supplemente: auf Ihre Werte abgestimmt.', textarea: true },
+      { key: 'FEATURE_3_TITEL', label: 'Feature 3 Titel', default: 'Ärztliche Begleitung' },
+      { key: 'FEATURE_3_TEXT', label: 'Feature 3 Text', default: 'Alle zwei Wochen ein Call. Dazwischen WhatsApp-Support.', textarea: true },
+      { key: 'TESTIMONIAL_TEXT', label: 'Testimonial-Text', default: 'Zum ersten Mal seit Jahren fühle ich mich nicht wie eine Checkliste.', textarea: true },
+      { key: 'TESTIMONIAL_NAME', label: 'Testimonial-Name', default: 'M., 47' },
+      { key: 'TESTIMONIAL_META', label: 'Testimonial-Meta', default: 'Teilnehmer · Bright Medical' },
+    ],
+  },
+}
+
+function $(id) { return document.getElementById(id) }
+
+function getToken() { return localStorage.getItem(STORAGE_TOKEN) || '' }
+function getTestRecipient() { return localStorage.getItem(STORAGE_TEST) || 'kuhendran@me.com' }
+
+function showTokenSetup() {
+  $('tokenSetup').classList.remove('hidden')
+  $('tokenInfo').classList.add('hidden')
+  $('form').classList.add('hidden')
+}
+function showFormFlow() {
+  $('tokenSetup').classList.add('hidden')
+  $('tokenInfo').classList.remove('hidden')
+  $('tabs').classList.remove('hidden')
+  switchMode(localStorage.getItem('bm_mode') || 'mail')
+}
+
+function switchMode(mode) {
+  localStorage.setItem('bm_mode', mode)
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.mode === mode)
+  })
+  $('form').classList.toggle('hidden', mode !== 'mail')
+  $('inviteForm').classList.toggle('hidden', mode !== 'invite')
+}
+
+function saveToken() {
+  const v = $('tokenInput').value.trim()
+  if (!v) { alert('Token darf nicht leer sein.'); return }
+  if (!v.startsWith('bm_')) {
+    if (!confirm('Token beginnt nicht mit "bm_". Trotzdem speichern?')) return
+  }
+  localStorage.setItem(STORAGE_TOKEN, v)
+  $('tokenInput').value = ''
+  init()
+}
+function resetToken() {
+  if (!confirm('Token entfernen? Du musst ihn dann neu eingeben.')) return
+  localStorage.removeItem(STORAGE_TOKEN)
+  init()
+}
+
+function setTestRecipient() {
+  $('to').value = getTestRecipient()
+}
+
+function buildField(f) {
+  const wrap = document.createElement('div')
+  if (f.short) wrap.style.gridColumn = 'auto'
+  const label = document.createElement('label')
+  label.htmlFor = 'var_' + f.key
+  label.textContent = f.label
+  wrap.appendChild(label)
+
+  let input
+  if (f.textarea) {
+    input = document.createElement('textarea')
+  } else {
+    input = document.createElement('input')
+    input.type = 'text'
+  }
+  input.id = 'var_' + f.key
+  input.dataset.varKey = f.key
+  input.value = f.default || ''
+  wrap.appendChild(input)
+
+  if (f.hint) {
+    const hint = document.createElement('div')
+    hint.className = 'help'
+    hint.textContent = f.hint
+    wrap.appendChild(hint)
+  }
+  return wrap
+}
+
+function renderFields() {
+  const tpl = $('template').value
+  const cfg = TEMPLATES[tpl]
+  const container = $('varsContainer')
+  container.innerHTML = ''
+
+  // Quick-pick buttons (z.B. für Programm-Auswahl bei e3a-zahlungslink)
+  if (cfg.quickpick && cfg.quickpick.length) {
+    const wrap = document.createElement('div')
+    wrap.className = 'quickpick'
+    cfg.quickpick.forEach((qp, idx) => {
+      const btn = document.createElement('button')
+      btn.type = 'button'
+      btn.innerHTML = qp.label + '<span class="price">' + qp.price + '</span>'
+      btn.onclick = () => {
+        // mark active
+        wrap.querySelectorAll('button').forEach(b => b.classList.remove('active'))
+        btn.classList.add('active')
+        // patch all input fields with the quickpick vars
+        for (const [k, v] of Object.entries(qp.vars)) {
+          const el = document.getElementById('var_' + k)
+          if (el) el.value = v
+        }
+      }
+      wrap.appendChild(btn)
+    })
+    container.appendChild(wrap)
+    const help = document.createElement('div')
+    help.className = 'help'
+    help.style.marginBottom = '14px'
+    help.textContent = 'Schnell-Auswahl füllt Programm-Felder unten automatisch. Du musst nur noch Anrede + Notiz anpassen.'
+    container.appendChild(help)
+  }
+
+  if (!cfg.fields.length) {
+    const empty = document.createElement('div')
+    empty.className = 'help'
+    empty.style.marginTop = '12px'
+    empty.textContent = 'Dieses Template hat keine variablen Felder.'
+    container.appendChild(empty)
+    return
+  }
+  // Group consecutive `short` fields into 2-col rows
+  let i = 0
+  while (i < cfg.fields.length) {
+    const f = cfg.fields[i]
+    if (f.short && cfg.fields[i+1] && cfg.fields[i+1].short) {
+      const row = document.createElement('div')
+      row.className = 'row'
+      row.appendChild(buildField(f))
+      row.appendChild(buildField(cfg.fields[i+1]))
+      container.appendChild(row)
+      i += 2
+    } else {
+      container.appendChild(buildField(f))
+      i += 1
+    }
+  }
+}
+
+function fillTemplateOptions() {
+  const sel = $('template')
+  sel.innerHTML = ''
+  for (const [key, cfg] of Object.entries(TEMPLATES)) {
+    const opt = document.createElement('option')
+    opt.value = key
+    opt.textContent = cfg.label + ' (' + key + ')'
+    sel.appendChild(opt)
+  }
+}
+
+function showStatus(kind, title, html) {
+  const s = $('status')
+  s.className = 'card show ' + kind
+  $('statusTitle').textContent = title
+  $('statusBody').innerHTML = html
+  s.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
+
+function pushHistory(entry) {
+  const all = JSON.parse(localStorage.getItem(STORAGE_HISTORY) || '[]')
+  all.unshift(entry)
+  while (all.length > 8) all.pop()
+  localStorage.setItem(STORAGE_HISTORY, JSON.stringify(all))
+  renderHistory()
+}
+
+function renderHistory() {
+  const all = JSON.parse(localStorage.getItem(STORAGE_HISTORY) || '[]')
+  const ul = $('history')
+  ul.innerHTML = ''
+  if (!all.length) {
+    ul.innerHTML = '<li class="empty">noch keine</li>'
+    return
+  }
+  for (const e of all) {
+    const li = document.createElement('li')
+    const t = new Date(e.at)
+    const stamp = t.toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })
+    li.innerHTML =
+      '<span class="who"><span class="pill ' + (e.ok ? '' : 'gone') + '">' + (e.ok ? '✓' : '✗') + '</span> ' +
+      e.template + ' → ' + e.to + '</span>' +
+      '<span class="when">' + stamp + '</span>'
+    ul.appendChild(li)
+  }
+}
+
+async function send() {
+  const token = getToken()
+  if (!token) { showTokenSetup(); return }
+  const to = $('to').value.trim()
+  const tpl = $('template').value
+  const subject = $('subject').value.trim()
+  if (!to) { showStatus('err', 'Fehler', 'Empfänger-E-Mail darf nicht leer sein.'); return }
+
+  const vars = {}
+  document.querySelectorAll('#varsContainer [data-var-key]').forEach((el) => {
+    vars[el.dataset.varKey] = el.value
+  })
+
+  $('sendBtn').disabled = true
+  $('sendBtn').textContent = 'Sende…'
+  showStatus('', 'Versand läuft…', 'Anfrage an ' + API_URL)
+
+  const body = { template: tpl, to, vars }
+  if (subject) body.subject = subject
+
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token,
+      },
+      body: JSON.stringify(body),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (res.ok && data.ok) {
+      showStatus('ok', '✓ Versendet', 'Template <strong>' + data.template + '</strong> ist an <strong>' + data.to + '</strong> versendet.<div class="small">Subject: ' + (data.subject || '–') + '<br>Resend message id: ' + data.messageId + '</div>')
+      pushHistory({ at: Date.now(), ok: true, template: tpl, to })
+    } else if (res.status === 401) {
+      showStatus('err', '✗ Token abgelehnt', 'Bearer-Token ist falsch oder abgelaufen. Bitte ändern.')
+      pushHistory({ at: Date.now(), ok: false, template: tpl, to })
+    } else {
+      const msg = data.error || 'HTTP ' + res.status
+      showStatus('err', '✗ Versand fehlgeschlagen', msg + (data.detail ? '<div class="small">' + JSON.stringify(data.detail) + '</div>' : ''))
+      pushHistory({ at: Date.now(), ok: false, template: tpl, to })
+    }
+  } catch (err) {
+    showStatus('err', '✗ Netzwerk-Fehler', err.message + '<div class="small">Verbindung prüfen, dann erneut versuchen.</div>')
+    pushHistory({ at: Date.now(), ok: false, template: tpl, to })
+  } finally {
+    $('sendBtn').disabled = false
+    $('sendBtn').textContent = 'Senden'
+  }
+}
+
+async function sendInvite() {
+  const token = getToken()
+  if (!token) { showTokenSetup(); return }
+  const to = $('inviteTo').value.trim()
+  const anrede = $('inviteAnrede').value.trim()
+  const note = $('inviteNote').value.trim()
+  if (!to) { showStatus('err', 'Fehler', 'Empfänger-E-Mail darf nicht leer sein.'); return }
+
+  $('inviteBtn').disabled = true
+  $('inviteBtn').textContent = 'Sende…'
+  showStatus('', 'Einladung wird erstellt…', 'JWT-Token wird generiert (14 Tage gültig).')
+
+  try {
+    const res = await fetch(window.location.origin + '/.netlify/functions/invite-questionnaire', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token,
+      },
+      body: JSON.stringify({ to, anrede, personalNote: note }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (res.ok && data.ok) {
+      showStatus(
+        'ok',
+        '✓ Einladung versendet',
+        'Die Einladung ist an <strong>' + data.to + '</strong> verschickt.<div class="small">Gültig bis ' + (data.expHuman || data.exp) + '<br>Resend message id: ' + data.messageId + '</div><code class="link">' + data.link + '</code>'
+      )
+      pushHistory({ at: Date.now(), ok: true, template: 'invite (Fragebogen)', to })
+      $('inviteTo').value = ''
+      $('inviteAnrede').value = ''
+      $('inviteNote').value = ''
+    } else if (res.status === 401) {
+      showStatus('err', '✗ Token abgelehnt', 'Bearer-Token ist falsch oder abgelaufen.')
+    } else {
+      showStatus('err', '✗ Versand fehlgeschlagen', data.error || ('HTTP ' + res.status))
+      pushHistory({ at: Date.now(), ok: false, template: 'invite (Fragebogen)', to })
+    }
+  } catch (err) {
+    showStatus('err', '✗ Netzwerk-Fehler', err.message)
+    pushHistory({ at: Date.now(), ok: false, template: 'invite (Fragebogen)', to })
+  } finally {
+    $('inviteBtn').disabled = false
+    $('inviteBtn').textContent = 'Einladung versenden'
+  }
+}
+
+function init() {
+  if (!getToken()) {
+    showTokenSetup()
+  } else {
+    showFormFlow()
+    fillTemplateOptions()
+    $('template').value = 'e1b-reminder-erstgespraech'
+    renderFields()
+  }
+  renderHistory()
+}
+
+document.addEventListener('DOMContentLoaded', init)
+</script>
+
+</body>
+</html>
