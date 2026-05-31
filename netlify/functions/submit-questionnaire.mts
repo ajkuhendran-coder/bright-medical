@@ -13,6 +13,7 @@ import { Resend } from 'resend'
 import type { Context } from '@netlify/functions'
 import { verifyFragebogenToken, tokenIdShort } from './_shared/jwt.js'
 import { pushToNotion, type FragebogenSubmission } from './_shared/notion.js'
+import { notifyCC } from './_shared/notify-cc.ts'
 
 const ADMIN_EMAIL = 'info@brightmedical.de'
 const FROM_EMAIL = 'Bright Medical <noreply@brightmedical.de>'
@@ -253,6 +254,32 @@ export default async (req: Request, _context: Context) => {
   }
 
   console.log(`✓ Fragebogen received from ${sanitized.name || '?'} (token=${tokenId})`)
+
+  // --- Notify Command Center (best-effort) ---
+  // Carries all answers + the Notion page id so the CC can link straight to it.
+  const ccEmail = invitedEmail || (sanitized.email ?? '')
+  if (ccEmail) {
+    await notifyCC({
+      event: 'bm.questionnaire.submitted',
+      email: ccEmail,
+      name: sanitized.name,
+      notionPageId: notionPageId || undefined,
+      data: {
+        thema: sanitized.thema,
+        alter: sanitized.alter,
+        geschlecht: sanitized.geschlecht,
+        koerper: sanitized.koerper,
+        ziel: sanitized.ziel,
+        dauer: sanitized.dauer,
+        gesundheitszustand: sanitized.gesundheitszustand,
+        medikamente: sanitized.medikamente,
+        coaching_erfahrung: sanitized.coaching_erfahrung,
+        bereitschaft: sanitized.bereitschaft,
+        aufmerksam: sanitized.aufmerksam,
+        sonstiges: sanitized.sonstiges,
+      },
+    })
+  }
 
   return new Response(
     JSON.stringify({
