@@ -31,6 +31,7 @@ type TemplateKey =
   | 'e1a-welcome'
   | 'e1b-reminder-erstgespraech'
   | 'e1c-reminder-folgetermin'
+  | 'e1f-praxis-onboarding'
   | 'e10-teaser'
   | 'e11-newsletter'
   | 'e2a-program-launch'
@@ -114,6 +115,21 @@ const TEMPLATES: Record<TemplateKey, TemplateConfig> = {
       VORBEREITUNG_3: 'Aktuelle Werte (CGM, Schlaf, Gewicht) — falls relevant.',
     },
   },
+  'e1f-praxis-onboarding': {
+    subject: 'Ihr Start bei Bright Medical — die nächsten Schritte',
+    vars: {
+      PREHEADER: 'Schön, dass Sie dabei sind — hier die nächsten Schritte.',
+      ANREDE: 'Liebe/r …,',
+      BODY:
+        'wir haben in unserem persönlichen Gespräch Ihre Ziele, Ihre Ausgangslage und Ihren möglichen Weg in Ruhe besprochen. Ich freue mich sehr, dass Sie sich für die Begleitung durch Bright Medical entschieden haben.\n\nDamit wir gut starten können, habe ich Ihnen die nächsten Schritte hier noch einmal kurz zusammengefasst.',
+      BODY_HTML: '',
+      HINWEIS: '',
+      HINWEIS_BLOCK: '',
+      CTA_LABEL: '',
+      CTA_LINK: '',
+      CTA_BLOCK: '',
+    },
+  },
   'e11-newsletter': {
     subject: 'Der Rundgang — Bright Medical',
     vars: {},
@@ -159,6 +175,7 @@ const REQUIRED_VARS: Partial<Record<TemplateKey, string[]>> = {
     'UHRZEIT',
   ],
   'e1c-reminder-folgetermin': ['WOCHENTAG', 'TAG_MONAT', 'JAHR', 'UHRZEIT'],
+  'e1f-praxis-onboarding': ['ANREDE'],
   'e3a-zahlungslink': ['ANREDE'],
 }
 

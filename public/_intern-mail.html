@@ -377,6 +377,15 @@ const TEMPLATES = {
       { key: 'VORBEREITUNG_3', label: 'Vorbereitung 3', default: 'Aktuelle Werte (CGM, Schlaf, Gewicht), falls relevant.' },
     ],
   },
+  'e1f-praxis-onboarding': {
+    label: '🤝 Praxis-Onboarding (Warm-Lead aus der Praxis)',
+    fields: [
+      { key: 'ANREDE', label: 'Anrede / Begrüßung', default: 'Liebe Frau …,' },
+      { key: 'BODY', label: 'Recap-Text (Standardtext, editierbar)', default: 'wir haben in unserem persönlichen Gespräch Ihre Ziele, Ihre Ausgangslage und Ihren möglichen Weg in Ruhe besprochen. Ich freue mich sehr, dass Sie sich für die Begleitung durch Bright Medical entschieden haben.\n\nDamit wir gut starten können, habe ich Ihnen die nächsten Schritte hier noch einmal kurz zusammengefasst.', textarea: true, hint: 'Vorausgefüllter Standardtext, pro Patient anpassbar. Leerzeile = neuer Absatz. Die „nächsten Schritte" (Zahlungslink/Vertrag) und das Gesprächs-Angebot sind im Design fest hinterlegt.' },
+      { key: 'HINWEIS', label: 'Zusätzlicher Hinweis-Kasten (optional, hellblau)', default: '', textarea: true, hint: 'Optionaler hervorgehobener Hinweis. Leer = kein Kasten.' },
+      { key: 'PREHEADER', label: 'Vorschautext im Postfach (optional)', default: 'Schön, dass Sie dabei sind — hier die nächsten Schritte.' },
+    ],
+  },
   'e0a-confirmation': {
     label: 'Bestätigung nach Anfrage (Auto-Reply, manuell hier)',
     fields: [
