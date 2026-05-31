@@ -1,11 +1,10 @@
-// submit-termin — nimmt die Terminwahl des Patienten entgegen.
-// Validiert das signierte JWT, ermittelt den gewählten Slot, schickt eine
-// Bestätigungs-Mail an den Patienten + eine Notiz an info@brightmedical.de
-// und meldet "bm.termin.selected" ans Command Center.
+// submit-termin — nimmt die Terminwahl ODER den Terminwunsch des Patienten entgegen.
+// Validiert das signierte JWT, dann zwei Modi:
+//   - Auswahl  (Body { token, slotId })  → Bestätigungs-Mail (+ .ics) + Notiz + notify-cc "bm.termin.selected"
+//   - Wunsch   (Body { token, wunsch })  → Notiz an info@ + notify-cc "bm.termin.wunsch"
 //
 // Method: POST (vom Browser der /termin-Seite)
-// Body:   { "token": "<JWT>", "slotId": "s2" }
-// Returns: { ok, slot: { id, start, dauer } } oder 400/401/429/500.
+// Returns: { ok, mode, slot? } oder 400/401/429/500.
 //
 // Sicherheit: kein Bearer nötig — die Echtheit garantiert das signierte JWT.
 
@@ -19,6 +18,7 @@ import { notifyCC } from './_shared/notify-cc.ts'
 const ADMIN_EMAIL = 'info@brightmedical.de'
 const FROM_EMAIL = 'Bright Medical <noreply@brightmedical.de>'
 const REPLY_TO = 'info@brightmedical.de'
+const MAX_WUNSCH = 1500
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -55,6 +55,39 @@ function formatSlotGerman(startISO: string): string {
   return `${datum} · ${zeit} Uhr`
 }
 
+// --- iCalendar (.ics) for "add to calendar" on the patient's phone ---
+function icsTimestamp(d: Date): string {
+  return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z')
+}
+function buildICS(slot: TerminSlot): string {
+  const start = new Date(slot.start)
+  const end = new Date(start.getTime() + slot.dauer * 60000)
+  const uid = `termin-${start.getTime()}-${Math.random().toString(36).slice(2)}@brightmedical.de`
+  return [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Bright Medical//Erstgespraech//DE',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    `UID:${uid}`,
+    `DTSTAMP:${icsTimestamp(new Date())}`,
+    `DTSTART:${icsTimestamp(start)}`,
+    `DTEND:${icsTimestamp(end)}`,
+    'SUMMARY:Erstgespräch · Bright Medical',
+    'DESCRIPTION:Ihr kostenloses Erstgespräch mit Ajanth Kuhendran (Bright Medical). Video- oder Telefongespräch.',
+    'ORGANIZER;CN=Bright Medical:mailto:info@brightmedical.de',
+    'STATUS:CONFIRMED',
+    'BEGIN:VALARM',
+    'TRIGGER:-PT30M',
+    'ACTION:DISPLAY',
+    'DESCRIPTION:Erstgespräch Bright Medical in 30 Minuten',
+    'END:VALARM',
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].join('\r\n')
+}
+
 // --- Rate limiting (in-memory, resets on cold start) ---
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000
 const RATE_LIMIT_MAX = 20
@@ -78,13 +111,6 @@ const CONFIRM_HTML_TEMPLATE = (() => {
   try { return loadFile('email-templates/e1e-termin-bestaetigung.html') }
   catch { return '' }
 })()
-let LOGO_LIGHT = '', LOGO_DARK = ''
-try {
-  const logosRaw = loadFile('email-templates/_assets/logos-base64.txt')
-  const [light, dark] = logosRaw.split('---SEPARATOR---').map((s) => s.trim())
-  LOGO_LIGHT = light || ''
-  LOGO_DARK = dark || ''
-} catch {}
 
 // --- Handler ---
 export default async (req: Request, _context: Context) => {
@@ -101,9 +127,8 @@ export default async (req: Request, _context: Context) => {
 
   let body: any
   try { body = await req.json() } catch { return jsonResponse(400, { error: 'Invalid JSON' }) }
-  const { token, slotId } = body || {}
+  const { token, slotId, wunsch } = body || {}
   if (typeof token !== 'string' || !token) return jsonResponse(400, { error: 'Missing token' })
-  if (typeof slotId !== 'string' || !slotId) return jsonResponse(400, { error: 'Missing slotId' })
 
   const verified = verifyTerminToken(token, jwtSecret)
   if (!verified.ok) {
@@ -112,31 +137,70 @@ export default async (req: Request, _context: Context) => {
   }
 
   const payload = verified.payload
-  const slot: TerminSlot | undefined = payload.slots.find((s) => s.id === slotId)
-  if (!slot) return jsonResponse(400, { error: 'Unbekannter Termin' })
-
   const email = payload.sub
-  const slotHuman = formatSlotGerman(slot.start)
   const tokenId = tokenIdShort(token)
-
   const apiKey = Netlify.env.get('RESEND_API_KEY')
   const resend = apiKey ? new Resend(apiKey) : null
 
-  // 1) Confirmation mail to the patient (best-effort)
+  // ===== Modus 2: Terminwunsch (keiner der Slots passt) =====
+  if (typeof wunsch === 'string' && wunsch.trim()) {
+    const wunschText = wunsch.trim().slice(0, MAX_WUNSCH)
+
+    // Notiz an den Arzt (best-effort)
+    if (resend) {
+      try {
+        await resend.emails.send({
+          from: FROM_EMAIL, to: ADMIN_EMAIL, replyTo: email,
+          subject: `Terminwunsch — ${email}`,
+          html: `<h2>Keiner der Termine passt — Terminwunsch</h2><p><strong>${escapeHtml(email)}</strong> schreibt:</p><blockquote style="border-left:3px solid #00B8D4;padding-left:14px;color:#2A3A52;">${escapeHtml(wunschText).replace(/\n/g, '<br/>')}</blockquote>${payload.subjectId ? `<p style="color:#999;">CC-Ref: ${escapeHtml(payload.subjectId)}</p>` : ''}<p style="color:#5A6A80;">Bitte mit neuen Terminen antworten (Antwort geht direkt an den Patienten).</p>`,
+        })
+      } catch (err) {
+        console.error('[submit-termin] wunsch admin mail failed', err)
+      }
+    }
+
+    // notify-cc (best-effort)
+    await notifyCC({
+      event: 'bm.termin.wunsch',
+      email,
+      data: {
+        ...(payload.subjectId ? { subjectId: payload.subjectId } : {}),
+        wunsch: wunschText,
+      },
+    })
+
+    console.log(`✓ Terminwunsch: ${email} (token=${tokenId})`)
+    return jsonResponse(200, { ok: true, mode: 'wunsch' })
+  }
+
+  // ===== Modus 1: Slot-Auswahl =====
+  if (typeof slotId !== 'string' || !slotId) {
+    return jsonResponse(400, { error: 'Missing slotId or wunsch' })
+  }
+  const slot: TerminSlot | undefined = payload.slots.find((s) => s.id === slotId)
+  if (!slot) return jsonResponse(400, { error: 'Unbekannter Termin' })
+
+  const slotHuman = formatSlotGerman(slot.start)
+
+  // 1) Confirmation mail to the patient with .ics attachment (best-effort)
   if (resend && CONFIRM_HTML_TEMPLATE) {
     try {
       let html = CONFIRM_HTML_TEMPLATE
       const vars: Record<string, string> = {
-        LOGO_LIGHT, LOGO_DARK,
         TERMIN: escapeHtml(slotHuman),
         DAUER: String(slot.dauer),
+        LOGO_LIGHT: '', LOGO_DARK: '',
       }
       for (const [k, v] of Object.entries(vars)) html = html.replaceAll(`{{${k}}}`, v)
+      const ics = buildICS(slot)
       await resend.emails.send({
         from: FROM_EMAIL, replyTo: REPLY_TO, to: email,
         subject: 'Ihr Erstgespräch ist reserviert',
         html,
-        text: `Ihr Termin ist reserviert:\n\n${slotHuman} (${slot.dauer} Min)\n\nIch melde mich zur vereinbarten Zeit. Bei Fragen einfach auf diese Mail antworten.\n\nHerzlich,\nAjanth Kuhendran · Bright Medical`,
+        text: `Ihr Termin ist reserviert:\n\n${slotHuman} (${slot.dauer} Min)\n\nDer Kalender-Eintrag liegt als Anhang bei. Ich melde mich zur vereinbarten Zeit. Bei Fragen einfach auf diese Mail antworten.\n\nHerzlich,\nAjanth Kuhendran · Bright Medical`,
+        attachments: [
+          { filename: 'Erstgespraech-BrightMedical.ics', content: Buffer.from(ics, 'utf8').toString('base64') },
+        ],
       })
     } catch (err) {
       console.error('[submit-termin] confirmation mail failed', err)
@@ -157,7 +221,6 @@ export default async (req: Request, _context: Context) => {
   }
 
   // 3) Notify Command Center (best-effort, helper swallows errors)
-  // subjectId travels inside data (NotifyCCInput has no top-level subjectId field).
   await notifyCC({
     event: 'bm.termin.selected',
     email,
@@ -171,9 +234,9 @@ export default async (req: Request, _context: Context) => {
   })
 
   console.log(`✓ Termin gewählt: ${email} → ${slotHuman} (token=${tokenId})`)
-
   return jsonResponse(200, {
     ok: true,
+    mode: 'selected',
     slot: { id: slot.id, start: slot.start, dauer: slot.dauer, human: slotHuman },
   })
 }

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 
 // Terminwahl-Seite für das Erstgespräch.
 // Liest die vom Arzt vorgewählten Slots aus dem signierten JWT (?t=...),
-// zeigt sie zur Auswahl und sendet die Wahl an submit-termin.
+// zeigt sie zur Auswahl ODER bietet "kein Termin passt" mit Freitext-Wunsch.
 // Die Signatur prüft der Server — clientseitig wird der Payload nur angezeigt.
 
 type Slot = { id: string; start: string; dauer: number }
@@ -11,7 +11,7 @@ type TerminPayload = { sub: string; exp: number; scope: string; slots: Slot[] }
 type SubmitState =
   | { kind: 'idle' }
   | { kind: 'submitting' }
-  | { kind: 'success'; human: string }
+  | { kind: 'success'; mode: 'selected' | 'wunsch'; human?: string }
   | { kind: 'error'; message: string }
 
 function readUrlToken(): string | null {
@@ -22,7 +22,6 @@ function readUrlToken(): string | null {
   return t
 }
 
-// Decode the JWT payload (no signature check — display only; server is the truth).
 function decodePayload(token: string): TerminPayload | null {
   try {
     const b64url = token.split('.')[0]
@@ -54,6 +53,8 @@ export default function Termin() {
   const token = useMemo(readUrlToken, [])
   const payload = useMemo(() => (token ? decodePayload(token) : null), [token])
   const [selected, setSelected] = useState<string>('')
+  const [wunschMode, setWunschMode] = useState(false)
+  const [wunschText, setWunschText] = useState('')
   const [submit, setSubmit] = useState<SubmitState>({ kind: 'idle' })
 
   useEffect(() => {
@@ -69,25 +70,45 @@ export default function Termin() {
 
   const expired = payload ? payload.exp < Date.now() : false
 
-  async function onSubmit() {
+  async function post(payloadBody: Record<string, unknown>): Promise<any> {
+    const res = await fetch('/.netlify/functions/submit-termin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payloadBody),
+    })
+    const data = await res.json().catch(() => ({}))
+    return { res, data }
+  }
+
+  function handleError(res: Response, data: any) {
+    if (res.status === 429) {
+      setSubmit({ kind: 'error', message: 'Zu viele Anfragen, bitte später erneut versuchen.' })
+    } else if (res.status === 401) {
+      setSubmit({ kind: 'error', message: 'Dieser Link ist abgelaufen. Bitte fragen Sie eine neue Einladung an: info@brightmedical.de' })
+    } else {
+      setSubmit({ kind: 'error', message: data.error || `Fehler ${res.status}. Bitte erneut versuchen.` })
+    }
+  }
+
+  async function chooseSlot() {
     if (!token || !selected) return
     setSubmit({ kind: 'submitting' })
     try {
-      const res = await fetch('/.netlify/functions/submit-termin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, slotId: selected }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (res.ok && data.ok) {
-        setSubmit({ kind: 'success', human: data.slot?.human || '' })
-      } else if (res.status === 429) {
-        setSubmit({ kind: 'error', message: 'Zu viele Anfragen, bitte später erneut versuchen.' })
-      } else if (res.status === 401) {
-        setSubmit({ kind: 'error', message: 'Dieser Link ist abgelaufen. Bitte fragen Sie eine neue Einladung an: info@brightmedical.de' })
-      } else {
-        setSubmit({ kind: 'error', message: data.error || `Fehler ${res.status}. Bitte erneut versuchen.` })
-      }
+      const { res, data } = await post({ token, slotId: selected })
+      if (res.ok && data.ok) setSubmit({ kind: 'success', mode: 'selected', human: data.slot?.human || '' })
+      else handleError(res, data)
+    } catch {
+      setSubmit({ kind: 'error', message: 'Netzwerk-Fehler, bitte Verbindung prüfen und erneut versuchen.' })
+    }
+  }
+
+  async function sendWunsch() {
+    if (!token || !wunschText.trim()) return
+    setSubmit({ kind: 'submitting' })
+    try {
+      const { res, data } = await post({ token, wunsch: wunschText.trim() })
+      if (res.ok && data.ok) setSubmit({ kind: 'success', mode: 'wunsch' })
+      else handleError(res, data)
     } catch {
       setSubmit({ kind: 'error', message: 'Netzwerk-Fehler, bitte Verbindung prüfen und erneut versuchen.' })
     }
@@ -116,6 +137,7 @@ export default function Termin() {
 
   // ---- Success ----
   if (submit.kind === 'success') {
+    const isWunsch = submit.mode === 'wunsch'
     return (
       <div className="min-h-[80vh] flex items-center justify-center px-4 py-16">
         <div className="max-w-lg w-full bg-white border border-slate-200 rounded-2xl p-10 text-center shadow-sm">
@@ -124,13 +146,24 @@ export default function Termin() {
               <polyline points="5 12 10 17 19 8" />
             </svg>
           </div>
-          <h1 className="font-heading text-3xl text-[var(--color-navy)] mb-4">Termin reserviert!</h1>
-          {submit.human && (
-            <p className="text-[var(--color-navy)] font-medium mb-2">{submit.human}</p>
+          {isWunsch ? (
+            <>
+              <h1 className="font-heading text-3xl text-[var(--color-navy)] mb-4">Danke!</h1>
+              <p className="text-slate-600 leading-relaxed mb-8">
+                Ihre Rückmeldung ist bei mir angekommen. Ich melde mich in Kürze persönlich
+                mit passenderen Terminvorschlägen bei Ihnen.
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="font-heading text-3xl text-[var(--color-navy)] mb-4">Termin reserviert!</h1>
+              {submit.human && <p className="text-[var(--color-navy)] font-medium mb-2">{submit.human}</p>}
+              <p className="text-slate-600 leading-relaxed mb-8">
+                Sie bekommen gleich eine Bestätigung per E-Mail — mit Kalender-Eintrag zum
+                Hinzufügen. Ich melde mich zur vereinbarten Zeit bei Ihnen.
+              </p>
+            </>
           )}
-          <p className="text-slate-600 leading-relaxed mb-8">
-            Sie bekommen gleich eine Bestätigung per E-Mail. Ich melde mich zur vereinbarten Zeit bei Ihnen.
-          </p>
           <a href="/" className="inline-block px-6 py-3 rounded-full bg-[var(--color-navy)] text-white font-medium hover:bg-[var(--color-navy-light)] transition-colors">
             Zur Startseite
           </a>
@@ -139,7 +172,7 @@ export default function Termin() {
     )
   }
 
-  // ---- Slot selection ----
+  // ---- Selection / Wunsch ----
   return (
     <div className="min-h-[80vh] bg-[var(--color-slate-light)] py-12 px-4">
       <div className="max-w-2xl mx-auto">
@@ -148,71 +181,127 @@ export default function Termin() {
             Erstgespräch
           </p>
           <h1 className="font-heading text-3xl md:text-4xl text-[var(--color-navy)] leading-tight mb-3">
-            Wählen Sie Ihren Wunschtermin.
+            {wunschMode ? 'Wann passt es Ihnen besser?' : 'Wählen Sie Ihren Wunschtermin.'}
           </h1>
           <p className="text-slate-600 leading-relaxed">
-            Bitte wählen Sie einen der folgenden Termine für unser kostenloses Erstgespräch.
+            {wunschMode
+              ? 'Sagen Sie mir kurz, wann es Ihnen zeitlich am besten passt — ich melde mich mit passenden Terminen.'
+              : 'Bitte wählen Sie einen der folgenden Termine für unser kostenloses Erstgespräch.'}
           </p>
         </header>
 
         <div className="bg-white border border-slate-200 rounded-2xl p-6 md:p-8 shadow-sm">
-          <div className="space-y-3">
-            {payload.slots.map((s) => {
-              const { datum, zeit } = formatSlot(s.start)
-              const active = selected === s.id
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => setSelected(s.id)}
-                  className={
-                    'w-full text-left rounded-xl border-2 px-5 py-4 transition-all flex items-center justify-between gap-4 ' +
-                    (active
-                      ? 'border-[var(--color-teal)] bg-[var(--color-teal)]/5'
-                      : 'border-slate-200 hover:border-slate-300 bg-white')
-                  }
-                >
-                  <span>
-                    <span className="block font-medium text-[var(--color-navy)]">{datum}</span>
-                    <span className="block text-sm text-slate-500 mt-0.5">{zeit} Uhr · {s.dauer} Min</span>
-                  </span>
-                  <span
-                    className={
-                      'shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center ' +
-                      (active ? 'border-[var(--color-teal)] bg-[var(--color-teal)]' : 'border-slate-300')
-                    }
-                    aria-hidden="true"
-                  >
-                    {active && (
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="5 12 10 17 19 8" />
-                      </svg>
-                    )}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
 
-          {submit.kind === 'error' && (
-            <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
-              {submit.message}
-            </div>
+          {!wunschMode && (
+            <>
+              <div className="space-y-3">
+                {payload.slots.map((s) => {
+                  const { datum, zeit } = formatSlot(s.start)
+                  const active = selected === s.id
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setSelected(s.id)}
+                      className={
+                        'w-full text-left rounded-xl border-2 px-5 py-4 transition-all flex items-center justify-between gap-4 ' +
+                        (active
+                          ? 'border-[var(--color-teal)] bg-[var(--color-teal)]/5'
+                          : 'border-slate-200 hover:border-slate-300 bg-white')
+                      }
+                    >
+                      <span>
+                        <span className="block font-medium text-[var(--color-navy)]">{datum}</span>
+                        <span className="block text-sm text-slate-500 mt-0.5">{zeit} Uhr · {s.dauer} Min</span>
+                      </span>
+                      <span
+                        className={
+                          'shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center ' +
+                          (active ? 'border-[var(--color-teal)] bg-[var(--color-teal)]' : 'border-slate-300')
+                        }
+                        aria-hidden="true"
+                      >
+                        {active && (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="5 12 10 17 19 8" />
+                          </svg>
+                        )}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+
+              {submit.kind === 'error' && (
+                <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+                  {submit.message}
+                </div>
+              )}
+
+              <div className="mt-8 pt-6 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={chooseSlot}
+                  disabled={!selected || submit.kind === 'submitting'}
+                  className="w-full px-6 py-4 rounded-full bg-[var(--color-teal)] text-white font-semibold hover:bg-[var(--color-teal-dark)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submit.kind === 'submitting' ? 'Wird reserviert …' : 'Termin verbindlich wählen'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setWunschMode(true); setSubmit({ kind: 'idle' }) }}
+                  className="w-full mt-3 text-sm text-slate-500 hover:text-[var(--color-navy)] underline underline-offset-2 transition-colors"
+                >
+                  Keiner dieser Termine passt?
+                </button>
+              </div>
+            </>
           )}
 
-          <div className="mt-8 pt-6 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={onSubmit}
-              disabled={!selected || submit.kind === 'submitting'}
-              className="w-full px-6 py-4 rounded-full bg-[var(--color-teal)] text-white font-semibold hover:bg-[var(--color-teal-dark)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {submit.kind === 'submitting' ? 'Wird reserviert …' : 'Termin verbindlich wählen'}
-            </button>
-            <p className="text-xs text-slate-400 text-center mt-3">
-              Kostenloses Erstgespräch · keine Diagnose, keine Behandlung
-            </p>
-          </div>
+          {wunschMode && (
+            <>
+              <label htmlFor="wunsch" className="block text-sm font-medium text-[var(--color-navy)] mb-2">
+                Ihr Terminwunsch
+              </label>
+              <textarea
+                id="wunsch"
+                rows={4}
+                value={wunschText}
+                onChange={(e) => setWunschText(e.target.value)}
+                maxLength={1500}
+                placeholder="z. B. „Am besten Montag- oder Mittwochnachmittag, oder freitags vormittags."
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-[var(--color-teal)] focus:ring-2 focus:ring-[var(--color-teal)]/20 outline-none transition-all text-sm resize-none"
+              />
+
+              {submit.kind === 'error' && (
+                <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+                  {submit.message}
+                </div>
+              )}
+
+              <div className="mt-8 pt-6 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={sendWunsch}
+                  disabled={!wunschText.trim() || submit.kind === 'submitting'}
+                  className="w-full px-6 py-4 rounded-full bg-[var(--color-teal)] text-white font-semibold hover:bg-[var(--color-teal-dark)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submit.kind === 'submitting' ? 'Wird gesendet …' : 'Terminwunsch absenden'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setWunschMode(false); setSubmit({ kind: 'idle' }) }}
+                  className="w-full mt-3 text-sm text-slate-500 hover:text-[var(--color-navy)] underline underline-offset-2 transition-colors"
+                >
+                  Zurück zur Terminauswahl
+                </button>
+              </div>
+            </>
+          )}
+
+          <p className="text-xs text-slate-400 text-center mt-6">
+            Kostenloses Erstgespräch · keine Diagnose, keine Behandlung
+          </p>
         </div>
       </div>
     </div>
