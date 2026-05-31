@@ -53,6 +53,7 @@ export default function Termin() {
   const token = useMemo(readUrlToken, [])
   const payload = useMemo(() => (token ? decodePayload(token) : null), [token])
   const [selected, setSelected] = useState<string>('')
+  const [telefon, setTelefon] = useState('')
   const [wunschMode, setWunschMode] = useState(false)
   const [wunschText, setWunschText] = useState('')
   const [submit, setSubmit] = useState<SubmitState>({ kind: 'idle' })
@@ -91,10 +92,10 @@ export default function Termin() {
   }
 
   async function chooseSlot() {
-    if (!token || !selected) return
+    if (!token || !selected || telefon.trim().length < 5) return
     setSubmit({ kind: 'submitting' })
     try {
-      const { res, data } = await post({ token, slotId: selected })
+      const { res, data } = await post({ token, slotId: selected, telefon: telefon.trim() })
       if (res.ok && data.ok) setSubmit({ kind: 'success', mode: 'selected', human: data.slot?.human || '' })
       else handleError(res, data)
     } catch {
@@ -106,7 +107,7 @@ export default function Termin() {
     if (!token || !wunschText.trim()) return
     setSubmit({ kind: 'submitting' })
     try {
-      const { res, data } = await post({ token, wunsch: wunschText.trim() })
+      const { res, data } = await post({ token, wunsch: wunschText.trim(), ...(telefon.trim() ? { telefon: telefon.trim() } : {}) })
       if (res.ok && data.ok) setSubmit({ kind: 'success', mode: 'wunsch' })
       else handleError(res, data)
     } catch {
@@ -232,6 +233,23 @@ export default function Termin() {
                 })}
               </div>
 
+              <div className="mt-6">
+                <label htmlFor="telefon" className="block text-sm font-medium text-[var(--color-navy)] mb-1.5">
+                  Ihre Telefonnummer
+                </label>
+                <input
+                  id="telefon"
+                  type="tel"
+                  value={telefon}
+                  onChange={(e) => setTelefon(e.target.value)}
+                  maxLength={40}
+                  placeholder="+49 …"
+                  autoComplete="tel"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-[var(--color-teal)] focus:ring-2 focus:ring-[var(--color-teal)]/20 outline-none transition-all text-sm"
+                />
+                <p className="mt-1.5 text-xs text-slate-400">Unter dieser Nummer erreiche ich Sie zum Erstgespräch.</p>
+              </div>
+
               {submit.kind === 'error' && (
                 <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
                   {submit.message}
@@ -242,7 +260,7 @@ export default function Termin() {
                 <button
                   type="button"
                   onClick={chooseSlot}
-                  disabled={!selected || submit.kind === 'submitting'}
+                  disabled={!selected || telefon.trim().length < 5 || submit.kind === 'submitting'}
                   className="w-full px-6 py-4 rounded-full bg-[var(--color-teal)] text-white font-semibold hover:bg-[var(--color-teal-dark)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {submit.kind === 'submitting' ? 'Wird reserviert …' : 'Termin verbindlich wählen'}

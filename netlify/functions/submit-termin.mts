@@ -129,6 +129,7 @@ export default async (req: Request, _context: Context) => {
   try { body = await req.json() } catch { return jsonResponse(400, { error: 'Invalid JSON' }) }
   const { token, slotId, wunsch } = body || {}
   if (typeof token !== 'string' || !token) return jsonResponse(400, { error: 'Missing token' })
+  const telefon = typeof body?.telefon === 'string' ? body.telefon.trim().slice(0, 40) : ''
 
   const verified = verifyTerminToken(token, jwtSecret)
   if (!verified.ok) {
@@ -152,7 +153,7 @@ export default async (req: Request, _context: Context) => {
         await resend.emails.send({
           from: FROM_EMAIL, to: ADMIN_EMAIL, replyTo: email,
           subject: `Terminwunsch — ${email}`,
-          html: `<h2>Keiner der Termine passt — Terminwunsch</h2><p><strong>${escapeHtml(email)}</strong> schreibt:</p><blockquote style="border-left:3px solid #00B8D4;padding-left:14px;color:#2A3A52;">${escapeHtml(wunschText).replace(/\n/g, '<br/>')}</blockquote>${payload.subjectId ? `<p style="color:#999;">CC-Ref: ${escapeHtml(payload.subjectId)}</p>` : ''}<p style="color:#5A6A80;">Bitte mit neuen Terminen antworten (Antwort geht direkt an den Patienten).</p>`,
+          html: `<h2>Keiner der Termine passt — Terminwunsch</h2><p><strong>${escapeHtml(email)}</strong> schreibt:</p><blockquote style="border-left:3px solid #00B8D4;padding-left:14px;color:#2A3A52;">${escapeHtml(wunschText).replace(/\n/g, '<br/>')}</blockquote>${telefon ? `<p>Telefon: <strong>${escapeHtml(telefon)}</strong></p>` : ''}${payload.subjectId ? `<p style="color:#999;">CC-Ref: ${escapeHtml(payload.subjectId)}</p>` : ''}<p style="color:#5A6A80;">Bitte mit neuen Terminen antworten (Antwort geht direkt an den Patienten).</p>`,
         })
       } catch (err) {
         console.error('[submit-termin] wunsch admin mail failed', err)
@@ -163,9 +164,11 @@ export default async (req: Request, _context: Context) => {
     await notifyCC({
       event: 'bm.termin.wunsch',
       email,
+      ...(telefon ? { phone: telefon } : {}),
       data: {
         ...(payload.subjectId ? { subjectId: payload.subjectId } : {}),
         wunsch: wunschText,
+        ...(telefon ? { telefon } : {}),
       },
     })
 
@@ -179,6 +182,9 @@ export default async (req: Request, _context: Context) => {
   }
   const slot: TerminSlot | undefined = payload.slots.find((s) => s.id === slotId)
   if (!slot) return jsonResponse(400, { error: 'Unbekannter Termin' })
+  if (!telefon || telefon.length < 5) {
+    return jsonResponse(400, { error: 'Bitte geben Sie eine Telefonnummer an, unter der wir Sie zum Erstgespräch erreichen.' })
+  }
 
   const slotHuman = formatSlotGerman(slot.start)
 
@@ -213,7 +219,7 @@ export default async (req: Request, _context: Context) => {
       await resend.emails.send({
         from: FROM_EMAIL, to: ADMIN_EMAIL,
         subject: `Termin gewählt — ${email}`,
-        html: `<h2>Erstgespräch-Termin gewählt</h2><p><strong>${escapeHtml(email)}</strong> hat gewählt:</p><p style="font-size:16px;">${escapeHtml(slotHuman)} (${slot.dauer} Min)</p>${payload.subjectId ? `<p style="color:#999;">CC-Ref: ${escapeHtml(payload.subjectId)}</p>` : ''}`,
+        html: `<h2>Erstgespräch-Termin gewählt</h2><p><strong>${escapeHtml(email)}</strong> hat gewählt:</p><p style="font-size:16px;">${escapeHtml(slotHuman)} (${slot.dauer} Min)</p><p>Telefon: <strong>${escapeHtml(telefon)}</strong></p>${payload.subjectId ? `<p style="color:#999;">CC-Ref: ${escapeHtml(payload.subjectId)}</p>` : ''}`,
       })
     } catch (err) {
       console.error('[submit-termin] admin mail failed', err)
@@ -224,12 +230,14 @@ export default async (req: Request, _context: Context) => {
   await notifyCC({
     event: 'bm.termin.selected',
     email,
+    phone: telefon,
     data: {
       ...(payload.subjectId ? { subjectId: payload.subjectId } : {}),
       slotId: slot.id,
       start: slot.start,
       dauer: slot.dauer,
       terminHuman: slotHuman,
+      telefon,
     },
   })
 
