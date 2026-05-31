@@ -46,7 +46,7 @@ const TEMPLATES: Record<TemplateKey, TemplateConfig> = {
     subject: 'Eine Nachricht von Bright Medical',
     vars: {
       PREHEADER: 'Eine persönliche Nachricht von Bright Medical.',
-      ANREDE: 'Liebe Frau Müller,',
+      ANREDE: 'Guten Tag,',
       BODY: '',
       BODY_HTML: '',
       CTA_LABEL: '',
@@ -62,7 +62,7 @@ const TEMPLATES: Record<TemplateKey, TemplateConfig> = {
   },
   'e0c-verzoegerung': {
     subject: 'Eine persönliche Nachricht zu Ihrer Anfrage',
-    vars: { ANREDE: 'Frau Müller' },
+    vars: { ANREDE: 'Guten Tag' },
   },
   'e10-teaser': {
     subject: 'Etwas Neues aus unserer Praxis.',
@@ -71,30 +71,29 @@ const TEMPLATES: Record<TemplateKey, TemplateConfig> = {
   'e1a-welcome': {
     subject: 'Willkommen bei Bright Medical',
     vars: {
-      ANREDE_KURZ: 'Frau Becker',
-      TERMIN_TAG: '5',
-      TERMIN_MONAT_KURZ: 'MAI',
-      TERMIN_WOCHENTAG_KURZ: 'DI',
+      ANREDE_KURZ: 'Frau/Herr …',
+      TERMIN_TAG: '—',
+      TERMIN_MONAT_KURZ: '—',
+      TERMIN_WOCHENTAG_KURZ: '—',
       TERMIN_DAUER: '20 min',
-      TERMIN_UHRZEIT: '14:30',
+      TERMIN_UHRZEIT: '—',
       TERMIN_FORMAT: 'Telefongespräch',
     },
   },
   'e1b-reminder-erstgespraech': {
     subject: 'Erinnerung: Erstgespräch · {{WOCHENTAG_KURZ}} {{DATUM_KURZ}} · {{UHRZEIT}} Uhr',
     vars: {
-      ANREDE_KURZ: 'Frau Bechtel',
-      WOCHENTAG: 'DONNERSTAG',
-      WOCHENTAG_KURZ: 'Do',
-      DATUM_KURZ: '30.04.',
-      TAG_MONAT: '30. APRIL',
-      JAHR: '2026',
-      UHRZEIT: '13:15',
+      ANREDE_KURZ: 'Frau/Herr …',
+      WOCHENTAG: '—',
+      WOCHENTAG_KURZ: '—',
+      DATUM_KURZ: '—',
+      TAG_MONAT: '—',
+      JAHR: '—',
+      UHRZEIT: '—',
       DAUER: '20 Minuten',
       TELEFON_HINWEIS:
         'Bitte antworten Sie mir kurz mit der Telefonnummer, unter der ich Sie morgen erreichen kann.',
-      'PERSÖNLICHE_NOTIZ':
-        'Liebe Frau Bechtel, ich freue mich sehr auf unser Gespräch morgen. Bringen Sie ruhig auch alle Fragen mit, die Ihnen zwischendurch gekommen sind — wir nehmen uns die Zeit.',
+      'PERSÖNLICHE_NOTIZ': '',
     },
   },
   'e1c-reminder-folgetermin': {
@@ -102,10 +101,10 @@ const TEMPLATES: Record<TemplateKey, TemplateConfig> = {
     vars: {
       TERMIN_TYP: 'Coaching-Call',
       HEADLINE: 'Ihr nächster Coaching-Call.',
-      WOCHENTAG: 'DONNERSTAG',
-      TAG_MONAT: '7. MAI',
-      JAHR: '2026',
-      UHRZEIT: '15:00',
+      WOCHENTAG: '—',
+      TAG_MONAT: '—',
+      JAHR: '—',
+      UHRZEIT: '—',
       DAUER: '45 min',
       ORT_LABEL: 'Format',
       ORT_PRIMARY: 'Telefongespräch',
@@ -126,7 +125,7 @@ const TEMPLATES: Record<TemplateKey, TemplateConfig> = {
   'e3a-zahlungslink': {
     subject: 'Ihr Zahlungslink — {{PROGRAMM_NAME}}',
     vars: {
-      ANREDE: 'Liebe Frau Müller',
+      ANREDE: 'Frau/Herr …',
       PROGRAMM_NAME: 'Bright Medical Vollprogramm — 12 Wochen',
       PROGRAMM_KURZBESCHREIBUNG: '12 Wochen ärztlich begleitetes Coaching · 7 Calls · 6 CGM-Sensoren · individueller Plan',
       PROGRAMM_PREIS: '2.990 €',
@@ -136,6 +135,31 @@ const TEMPLATES: Record<TemplateKey, TemplateConfig> = {
       'PERSÖNLICHE_NOTIZ_BLOCK': '',
     },
   },
+}
+
+// Personalized templates MUST receive real per-recipient data from the caller.
+// Without this guard, the defaults above would silently render for a real patient
+// (the "Frau Bechtel / 30. April" bug). A missing key now fails loudly with 400
+// instead of mailing a plausible-but-wrong name/date to a real recipient.
+const REQUIRED_VARS: Partial<Record<TemplateKey, string[]>> = {
+  'e1a-welcome': [
+    'ANREDE_KURZ',
+    'TERMIN_TAG',
+    'TERMIN_MONAT_KURZ',
+    'TERMIN_WOCHENTAG_KURZ',
+    'TERMIN_UHRZEIT',
+  ],
+  'e1b-reminder-erstgespraech': [
+    'ANREDE_KURZ',
+    'WOCHENTAG',
+    'WOCHENTAG_KURZ',
+    'DATUM_KURZ',
+    'TAG_MONAT',
+    'JAHR',
+    'UHRZEIT',
+  ],
+  'e1c-reminder-folgetermin': ['WOCHENTAG', 'TAG_MONAT', 'JAHR', 'UHRZEIT'],
+  'e3a-zahlungslink': ['ANREDE'],
 }
 
 // --- Load templates + logos at module init (bundled via netlify.toml `included_files`) ---
@@ -339,6 +363,22 @@ export default async (req: Request, _context: Context) => {
   }
   if (clientVars !== undefined && (typeof clientVars !== 'object' || Array.isArray(clientVars))) {
     return jsonResponse(400, { error: '"vars" must be an object' })
+  }
+
+  // Guard: personalized templates must get real per-recipient data from the caller.
+  const required = REQUIRED_VARS[template as TemplateKey]
+  if (required) {
+    const provided = (clientVars || {}) as Record<string, unknown>
+    const missing = required.filter((k) => {
+      const v = provided[k]
+      return typeof v !== 'string' || v.trim() === ''
+    })
+    if (missing.length > 0) {
+      return jsonResponse(400, {
+        error: `Template "${template}" requires per-recipient vars — refusing to send with placeholder defaults`,
+        missing,
+      })
+    }
   }
 
   const templateKey = template as TemplateKey
