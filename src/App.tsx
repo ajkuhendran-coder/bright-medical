@@ -5,6 +5,7 @@ import Impressum from './pages/Impressum'
 import Datenschutz from './pages/Datenschutz'
 import AGB from './pages/AGB'
 import Fragebogen from './pages/Fragebogen'
+import Termin from './pages/Termin'
 import NotFound from './pages/NotFound'
 
 export default function App() {
@@ -16,6 +17,7 @@ export default function App() {
         <Route path="/datenschutz" element={<Datenschutz />} />
         <Route path="/agb" element={<AGB />} />
         <Route path="/fragebogen" element={<Fragebogen />} />
+        <Route path="/termin" element={<Termin />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

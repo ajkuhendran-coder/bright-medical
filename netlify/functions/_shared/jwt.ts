@@ -77,3 +77,82 @@ export function tokenIdShort(token: string): string {
   const dot = token.indexOf('.')
   return dot < 0 ? token.slice(0, 8) : token.slice(dot + 1, dot + 9)
 }
+
+// --- Termin-Token (Erstgespräch-Terminbuchung) ---
+// Carries the doctor-chosen slots inside the signed payload, so the BM side
+// stays stateless: the /termin page reads the slots from the verified token.
+
+export type TerminSlot = {
+  id: string      // stable slot key, e.g. "s1"
+  start: string   // ISO-8601 start, e.g. "2026-06-03T10:00:00+02:00"
+  dauer: number   // duration in minutes
+}
+
+export type TerminPayload = {
+  sub: string             // patient email
+  iat: number
+  exp: number
+  scope: 'termin'
+  subjectId?: string      // CC reference, e.g. "BM-2026-XXXX"
+  slots: TerminSlot[]
+}
+
+export function signTerminToken(
+  email: string,
+  slots: TerminSlot[],
+  subjectId: string | undefined,
+  ttlDays: number,
+  secret: string,
+): string {
+  const now = Date.now()
+  const payload: TerminPayload = {
+    sub: email.toLowerCase().trim(),
+    iat: now,
+    exp: now + ttlDays * 24 * 60 * 60 * 1000,
+    scope: 'termin',
+    ...(subjectId ? { subjectId } : {}),
+    slots,
+  }
+  const payloadB64 = b64urlEncode(JSON.stringify(payload))
+  const sig = createHmac('sha256', secret).update(payloadB64).digest()
+  const sigB64 = b64urlEncode(sig)
+  return `${payloadB64}.${sigB64}`
+}
+
+export type VerifyTerminResult =
+  | { ok: true; payload: TerminPayload }
+  | { ok: false; reason: 'malformed' | 'badSignature' | 'expired' | 'wrongScope' }
+
+export function verifyTerminToken(token: string, secret: string): VerifyTerminResult {
+  if (!token || typeof token !== 'string' || !token.includes('.')) {
+    return { ok: false, reason: 'malformed' }
+  }
+  const [payloadB64, sigB64] = token.split('.')
+  if (!payloadB64 || !sigB64) return { ok: false, reason: 'malformed' }
+
+  const expectedSig = createHmac('sha256', secret).update(payloadB64).digest()
+  let providedSig: Buffer
+  try {
+    providedSig = b64urlDecode(sigB64)
+  } catch {
+    return { ok: false, reason: 'malformed' }
+  }
+  if (providedSig.length !== expectedSig.length || !timingSafeEqual(providedSig, expectedSig)) {
+    return { ok: false, reason: 'badSignature' }
+  }
+
+  let payload: TerminPayload
+  try {
+    payload = JSON.parse(b64urlDecode(payloadB64).toString('utf8'))
+  } catch {
+    return { ok: false, reason: 'malformed' }
+  }
+  if (payload.scope !== 'termin') return { ok: false, reason: 'wrongScope' }
+  if (typeof payload.exp !== 'number' || payload.exp < Date.now()) {
+    return { ok: false, reason: 'expired' }
+  }
+  if (!Array.isArray(payload.slots) || payload.slots.length === 0) {
+    return { ok: false, reason: 'malformed' }
+  }
+  return { ok: true, payload }
+}
