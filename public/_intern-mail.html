@@ -386,6 +386,15 @@ const TEMPLATES = {
       { key: 'PREHEADER', label: 'Vorschautext im Postfach (optional)', default: 'Schön, dass Sie dabei sind — hier die nächsten Schritte.' },
     ],
   },
+  'e1h-telefon-nachfrage': {
+    label: '📞 Telefonnummer erfragen',
+    fields: [
+      { key: 'ANREDE', label: 'Anrede / Begrüßung', default: 'Liebe Frau …,' },
+      { key: 'BODY', label: 'Kontext-Text (editierbar, je nach Moment)', default: 'damit wir unser Gespräch gut vorbereiten können und ich Sie sicher erreiche, fehlt mir noch Ihre Telefonnummer.', textarea: true, hint: 'Anpassen je nach Moment: nach Terminoptionen / nach Terminannahme / kurz vor dem Gespräch. Die eigentliche Bitte um die Nummer + Antwort-Hinweis sind im Design fest.' },
+      { key: 'HINWEIS', label: 'Zusätzlicher Hinweis-Kasten (optional)', default: '', textarea: true, hint: 'Optionaler hellblauer Hinweis. Leer = kein Kasten.' },
+      { key: 'PREHEADER', label: 'Vorschautext im Postfach (optional)', default: 'Mir fehlt noch Ihre Telefonnummer für unser Gespräch.' },
+    ],
+  },
   'e0a-confirmation': {
     label: 'Bestätigung nach Anfrage (Auto-Reply, manuell hier)',
     fields: [

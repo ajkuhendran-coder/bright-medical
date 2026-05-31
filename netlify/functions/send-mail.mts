@@ -32,6 +32,7 @@ type TemplateKey =
   | 'e1b-reminder-erstgespraech'
   | 'e1c-reminder-folgetermin'
   | 'e1f-praxis-onboarding'
+  | 'e1h-telefon-nachfrage'
   | 'e10-teaser'
   | 'e11-newsletter'
   | 'e2a-program-launch'
@@ -130,6 +131,21 @@ const TEMPLATES: Record<TemplateKey, TemplateConfig> = {
       CTA_BLOCK: '',
     },
   },
+  'e1h-telefon-nachfrage': {
+    subject: 'Wie erreiche ich Sie am besten?',
+    vars: {
+      PREHEADER: 'Mir fehlt noch Ihre Telefonnummer für unser Gespräch.',
+      ANREDE: 'Liebe/r …,',
+      BODY:
+        'damit wir unser Gespräch gut vorbereiten können und ich Sie sicher erreiche, fehlt mir noch Ihre Telefonnummer.',
+      BODY_HTML: '',
+      HINWEIS: '',
+      HINWEIS_BLOCK: '',
+      CTA_LABEL: '',
+      CTA_LINK: '',
+      CTA_BLOCK: '',
+    },
+  },
   'e11-newsletter': {
     subject: 'Der Rundgang — Bright Medical',
     vars: {},
@@ -176,6 +192,7 @@ const REQUIRED_VARS: Partial<Record<TemplateKey, string[]>> = {
   ],
   'e1c-reminder-folgetermin': ['WOCHENTAG', 'TAG_MONAT', 'JAHR', 'UHRZEIT'],
   'e1f-praxis-onboarding': ['ANREDE'],
+  'e1h-telefon-nachfrage': ['ANREDE'],
   'e3a-zahlungslink': ['ANREDE'],
 }
 
