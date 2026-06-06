@@ -9,7 +9,7 @@
 //     "subject": "Custom subject (optional)",          // optional, overrides template default
 //     "from":    "Custom <from@brightmedical.de>",     // optional
 //     "replyTo": "info@brightmedical.de",              // optional
-//     "vars":    { "ANREDE_KURZ": "Frau Müller", ... } // optional, merged into template defaults
+//     "vars":    { "ANREDE_KURZ": "Herr Mustermann", ... } // optional, merged into template defaults
 //   }
 //
 // Returns 200 { ok: true, messageId, subject, to }
@@ -171,7 +171,7 @@ const TEMPLATES: Record<TemplateKey, TemplateConfig> = {
 
 // Personalized templates MUST receive real per-recipient data from the caller.
 // Without this guard, the defaults above would silently render for a real patient
-// (the "Frau Bechtel / 30. April" bug). A missing key now fails loudly with 400
+// (the "Herr Mustermann / 30. April" bug). A missing key now fails loudly with 400
 // instead of mailing a plausible-but-wrong name/date to a real recipient.
 const REQUIRED_VARS: Partial<Record<TemplateKey, string[]>> = {
   'e1a-welcome': [

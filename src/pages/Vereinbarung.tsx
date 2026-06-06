@@ -242,7 +242,7 @@ export default function Vereinbarung() {
             <label htmlFor="signature" className="block text-sm font-medium text-[var(--color-navy)] mb-1.5">
               Unterschrift — Ihr vollständiger Name in Druckbuchstaben
             </label>
-            <input id="signature" type="text" value={signature} onChange={(e) => setSignature(e.target.value)} maxLength={120} placeholder="z. B. ASLIHAN ÖZMEN" className={inputCls} />
+            <input id="signature" type="text" value={signature} onChange={(e) => setSignature(e.target.value)} maxLength={120} placeholder="z. B. MAX MUSTERMANN" className={inputCls} />
           </div>
 
           {submit.kind === 'error' && (

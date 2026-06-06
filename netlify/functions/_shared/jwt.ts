@@ -85,7 +85,7 @@ export type VereinbarungPayload = {
   paketKey: string        // 'deepdive' | 'vollprogramm' | 'raten' | 'upgrade'
   paketLabel: string      // human label, e.g. "Bright Medical Vollprogramm — 12 Wochen"
   paketPreis: string      // display price, e.g. "2.990 €"
-  name?: string           // optional prefill ("Aslihan Özmen")
+  name?: string           // optional prefill ("Max Mustermann")
 }
 
 export function signVereinbarungToken(

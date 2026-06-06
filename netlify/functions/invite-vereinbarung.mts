@@ -7,8 +7,8 @@
 // Body:    {
 //   "to": "klient@example.com",          // Pflicht
 //   "paket": "vollprogramm",              // Pflicht: deepdive | vollprogramm | raten | upgrade
-//   "anrede": "Liebe Frau Özmen,",        // optional (Default: neutrale Anrede)
-//   "name": "Aslihan Özmen",              // optional, Vorbefüllung des Namens auf der Seite
+//   "anrede": "Lieber Herr Mustermann,",        // optional (Default: neutrale Anrede)
+//   "name": "Max Mustermann",              // optional, Vorbefüllung des Namens auf der Seite
 //   "personalNote": "…",                  // optional, max 1500 Zeichen
 //   "subjectId": "BM-2026-XXXX"           // optional, CC-Referenz, wandert ins JWT + zurück
 // }

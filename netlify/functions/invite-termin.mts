@@ -6,7 +6,7 @@
 // Method:  POST
 // Body:    {
 //   "to": "patient@example.com",
-//   "anrede": "Frau Müller",
+//   "anrede": "Herr Mustermann",
 //   "slots": [ { "id": "s1", "start": "2026-06-03T10:00:00+02:00", "dauer": 20 }, ... ],
 //   "personalNote": "optional — kurzer persönlicher Satz",
 //   "subjectId": "BM-2026-XXXX"   // optional, CC-Referenz, wandert ins JWT + zurück

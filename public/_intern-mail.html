@@ -262,7 +262,7 @@
   <input type="email" id="inviteTo" autocomplete="email" placeholder="patient@example.com" />
 
   <label for="inviteAnrede">Anrede für die Mail (optional)</label>
-  <input type="text" id="inviteAnrede" placeholder="z.B. Frau Müller" />
+  <input type="text" id="inviteAnrede" placeholder="z.B. Herr Mustermann" />
   <div class="help">Erscheint in der Mail-Headline. Bei leer: „liebe Interessentin / lieber Interessent".</div>
 
   <label for="inviteNote">Persönliche Notiz (optional)</label>
@@ -324,7 +324,7 @@ const TEMPLATES = {
   'e-frei': {
     label: '✍️ Individuelle Nachricht (Freitext)',
     fields: [
-      { key: 'ANREDE', label: 'Anrede / Begrüßung', default: 'Liebe Frau Müller,' },
+      { key: 'ANREDE', label: 'Anrede / Begrüßung', default: 'Lieber Herr Mustermann,' },
       { key: 'BODY', label: 'Nachrichtentext', default: '', textarea: true, hint: 'Frei schreiben. Leerzeile = neuer Absatz. Wird automatisch ins BM-Design eingebettet (Logo, Signatur, Footer kommen von selbst).' },
       { key: 'CTA_LABEL', label: 'Button-Text (optional)', default: '', short: true, hint: 'z.B. „Zum Vertrag". Leer = kein Button.' },
       { key: 'CTA_LINK', label: 'Button-Link (optional)', default: '', short: true },
@@ -335,7 +335,7 @@ const TEMPLATES = {
   'e1b-reminder-erstgespraech': {
     label: '24h-Reminder Erstgespräch',
     fields: [
-      { key: 'ANREDE_KURZ', label: 'Anrede (Frau Müller)', default: 'Frau Bechtel' },
+      { key: 'ANREDE_KURZ', label: 'Anrede (Herr Mustermann)', default: 'Herr Mustermann' },
       { key: 'WOCHENTAG', label: 'Wochentag (DONNERSTAG)', default: 'DONNERSTAG' },
       { key: 'WOCHENTAG_KURZ', label: 'Wochentag kurz (Do)', default: 'Do', short: true },
       { key: 'DATUM_KURZ', label: 'Datum kurz (30.04.)', default: '30.04.', short: true },
@@ -344,13 +344,13 @@ const TEMPLATES = {
       { key: 'UHRZEIT', label: 'Uhrzeit (13:15)', default: '13:15', short: true },
       { key: 'DAUER', label: 'Dauer (20 Minuten)', default: '20 Minuten' },
       { key: 'TELEFON_HINWEIS', label: 'Telefon-Hinweis', default: 'Bitte antworten Sie mir kurz mit der Telefonnummer, unter der ich Sie morgen erreichen kann.', textarea: true, hint: 'z.B. „Ich rufe Sie an unter +49…", wenn die Nummer schon bekannt ist.' },
-      { key: 'PERSÖNLICHE_NOTIZ', label: 'Persönliche Notiz (kursiv in der Mail)', default: 'Liebe Frau Bechtel, ich freue mich sehr auf unser Gespräch morgen. Bringen Sie ruhig auch alle Fragen mit, die Ihnen zwischendurch gekommen sind, wir nehmen uns die Zeit.', textarea: true },
+      { key: 'PERSÖNLICHE_NOTIZ', label: 'Persönliche Notiz (kursiv in der Mail)', default: 'Lieber Herr Mustermann, ich freue mich sehr auf unser Gespräch morgen. Bringen Sie ruhig auch alle Fragen mit, die Ihnen zwischendurch gekommen sind, wir nehmen uns die Zeit.', textarea: true },
     ],
   },
   'e1a-welcome': {
     label: 'Willkommen nach Erstgespräch-Buchung',
     fields: [
-      { key: 'ANREDE_KURZ', label: 'Anrede', default: 'Frau Becker' },
+      { key: 'ANREDE_KURZ', label: 'Anrede', default: 'Herr Mustermann' },
       { key: 'TERMIN_TAG', label: 'Tag (Zahl)', default: '5', short: true },
       { key: 'TERMIN_MONAT_KURZ', label: 'Monat kurz (MAI)', default: 'MAI', short: true },
       { key: 'TERMIN_WOCHENTAG_KURZ', label: 'Wochentag kurz (DI)', default: 'DI', short: true },
@@ -413,7 +413,7 @@ const TEMPLATES = {
   'e0a-confirmation': {
     label: 'Bestätigung nach Anfrage (Auto-Reply, manuell hier)',
     fields: [
-      { key: 'firstName', label: 'Vorname', default: 'Melanie' },
+      { key: 'firstName', label: 'Vorname', default: 'Max' },
     ],
   },
   'e3a-zahlungslink': {
@@ -454,7 +454,7 @@ const TEMPLATES = {
       },
     ],
     fields: [
-      { key: 'ANREDE', label: 'Anrede', default: 'Liebe Frau Müller' },
+      { key: 'ANREDE', label: 'Anrede', default: 'Lieber Herr Mustermann' },
       { key: 'PROGRAMM_NAME', label: 'Programm-Name', default: 'Bright Medical Vollprogramm: 12 Wochen' },
       { key: 'PROGRAMM_KURZBESCHREIBUNG', label: 'Programm-Kurzbeschreibung (eine Zeile)', default: '12 Wochen ärztlich begleitetes Coaching · 7 Calls · 6 CGM-Sensoren · individueller Plan' },
       { key: 'PROGRAMM_PREIS', label: 'Preis (Anzeige)', default: '2.990 €', short: true },

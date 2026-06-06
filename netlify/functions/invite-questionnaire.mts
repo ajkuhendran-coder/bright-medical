@@ -5,7 +5,7 @@
 // Method:  POST
 // Body:    {
 //   "to": "patient@example.com",
-//   "anrede": "Frau Müller",
+//   "anrede": "Herr Mustermann",
 //   "personalNote": "optional — kurzer persönlicher Satz (eingebettet in die Mail)"
 // }
 //
