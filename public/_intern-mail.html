@@ -410,6 +410,24 @@ const TEMPLATES = {
       { key: 'PREHEADER', label: 'Vorschautext im Postfach (optional)', default: 'Mir fehlt noch Ihre Telefonnummer für unser Gespräch.' },
     ],
   },
+  'e2a-wegweiser-deepdive': {
+    label: '🧭 Wegweiser Deep-Dive (4 Wochen)',
+    fields: [
+      { key: 'ANREDE', label: 'Anrede / Begrüßung', default: 'Guten Tag Herr Mustermann,' },
+      { key: 'BODY', label: 'Einleitung (editierbar, z.B. Startdatum nennen)', default: 'vielen Dank für Ihre Rückmeldung, ich freue mich sehr, dass wir gemeinsam starten. Damit Sie genau wissen, was auf Sie zukommt, hier Ihr persönlicher Wegweiser.', textarea: true, hint: 'Ablauf, 2 Wege und nächste Schritte sind fest im Template. Hier kannst du z.B. das konkrete Startdatum ergänzen.' },
+      { key: 'HINWEIS', label: 'Zusätzlicher Hinweis-Kasten (optional)', default: '', textarea: true },
+      { key: 'PREHEADER', label: 'Vorschautext im Postfach (optional)', default: 'Ihr persönlicher Fahrplan für die nächsten vier Wochen.' },
+    ],
+  },
+  'e2b-wegweiser-vollprogramm': {
+    label: '🧭 Wegweiser Vollprogramm (12 Wochen)',
+    fields: [
+      { key: 'ANREDE', label: 'Anrede / Begrüßung', default: 'Guten Tag Herr Mustermann,' },
+      { key: 'BODY', label: 'Einleitung (editierbar, z.B. Startdatum nennen)', default: 'vielen Dank für Ihre Rückmeldung, ich freue mich sehr, dass wir gemeinsam starten. Damit Sie genau wissen, was auf Sie zukommt, hier Ihr persönlicher Wegweiser.', textarea: true, hint: 'Ablauf, 2 Wege und nächste Schritte sind fest im Template. Hier kannst du z.B. das konkrete Startdatum ergänzen.' },
+      { key: 'HINWEIS', label: 'Zusätzlicher Hinweis-Kasten (optional)', default: '', textarea: true },
+      { key: 'PREHEADER', label: 'Vorschautext im Postfach (optional)', default: 'Ihr persönlicher Fahrplan für die nächsten zwölf Wochen.' },
+    ],
+  },
   'e0a-confirmation': {
     label: 'Bestätigung nach Anfrage (Auto-Reply, manuell hier)',
     fields: [

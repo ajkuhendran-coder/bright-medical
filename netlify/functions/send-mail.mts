@@ -33,6 +33,8 @@ type TemplateKey =
   | 'e1c-reminder-folgetermin'
   | 'e1f-praxis-onboarding'
   | 'e1h-telefon-nachfrage'
+  | 'e2a-wegweiser-deepdive'
+  | 'e2b-wegweiser-vollprogramm'
   | 'e10-teaser'
   | 'e11-newsletter'
   | 'e2a-program-launch'
@@ -146,6 +148,36 @@ const TEMPLATES: Record<TemplateKey, TemplateConfig> = {
       CTA_BLOCK: '',
     },
   },
+  'e2a-wegweiser-deepdive': {
+    subject: 'Ihr Wegweiser, so laufen Ihre 4 Wochen ab',
+    vars: {
+      PREHEADER: 'Ihr persönlicher Fahrplan für die nächsten vier Wochen.',
+      ANREDE: 'Guten Tag,',
+      BODY:
+        'vielen Dank für Ihre Rückmeldung, ich freue mich sehr, dass wir gemeinsam starten. Damit Sie genau wissen, was auf Sie zukommt, hier Ihr persönlicher Wegweiser.',
+      BODY_HTML: '',
+      HINWEIS: '',
+      HINWEIS_BLOCK: '',
+      CTA_LABEL: '',
+      CTA_LINK: '',
+      CTA_BLOCK: '',
+    },
+  },
+  'e2b-wegweiser-vollprogramm': {
+    subject: 'Ihr Wegweiser, so laufen Ihre 12 Wochen ab',
+    vars: {
+      PREHEADER: 'Ihr persönlicher Fahrplan für die nächsten zwölf Wochen.',
+      ANREDE: 'Guten Tag,',
+      BODY:
+        'vielen Dank für Ihre Rückmeldung, ich freue mich sehr, dass wir gemeinsam starten. Damit Sie genau wissen, was auf Sie zukommt, hier Ihr persönlicher Wegweiser.',
+      BODY_HTML: '',
+      HINWEIS: '',
+      HINWEIS_BLOCK: '',
+      CTA_LABEL: '',
+      CTA_LINK: '',
+      CTA_BLOCK: '',
+    },
+  },
   'e11-newsletter': {
     subject: 'Der Rundgang — Bright Medical',
     vars: {},
@@ -193,6 +225,8 @@ const REQUIRED_VARS: Partial<Record<TemplateKey, string[]>> = {
   'e1c-reminder-folgetermin': ['WOCHENTAG', 'TAG_MONAT', 'JAHR', 'UHRZEIT'],
   'e1f-praxis-onboarding': ['ANREDE'],
   'e1h-telefon-nachfrage': ['ANREDE'],
+  'e2a-wegweiser-deepdive': ['ANREDE'],
+  'e2b-wegweiser-vollprogramm': ['ANREDE'],
   'e3a-zahlungslink': ['ANREDE'],
 }
 
