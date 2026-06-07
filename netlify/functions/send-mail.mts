@@ -10,6 +10,7 @@
 //     "from":    "Custom <from@brightmedical.de>",     // optional
 //     "replyTo": "info@brightmedical.de",              // optional
 //     "vars":    { "ANREDE_KURZ": "Herr Mustermann", ... } // optional, merged into template defaults
+//     "attachments": [{ "filename": "Plan.pdf", "content": "<base64>" }] // optional (e.g. Plan-Versand-PDF)
 //   }
 //
 // Returns 200 { ok: true, messageId, subject, to }
@@ -418,7 +419,7 @@ export default async (req: Request, _context: Context) => {
     return jsonResponse(400, { error: 'Invalid JSON body' })
   }
 
-  const { template, to, subject, from, replyTo, vars: clientVars } = body || {}
+  const { template, to, subject, from, replyTo, vars: clientVars, attachments } = body || {}
 
   if (typeof template !== 'string' || !(template in TEMPLATES)) {
     return jsonResponse(400, {
@@ -431,6 +432,27 @@ export default async (req: Request, _context: Context) => {
   }
   if (clientVars !== undefined && (typeof clientVars !== 'object' || Array.isArray(clientVars))) {
     return jsonResponse(400, { error: '"vars" must be an object' })
+  }
+
+  // Optional file attachments (e.g. the Plan-Versand PDF). Each item: { filename, content (base64) }.
+  // Same shape Resend expects; mirrors the proven attachment path in submit-vereinbarung.mts.
+  let validAttachments: { filename: string; content: string }[] = []
+  if (attachments !== undefined) {
+    if (!Array.isArray(attachments)) {
+      return jsonResponse(400, { error: '"attachments" must be an array' })
+    }
+    validAttachments = attachments.filter(
+      (a: unknown): a is { filename: string; content: string } =>
+        !!a &&
+        typeof (a as { filename?: unknown }).filename === 'string' &&
+        typeof (a as { content?: unknown }).content === 'string' &&
+        (a as { content: string }).content.length > 0,
+    )
+    // Guard against oversized payloads (Resend hard limit ~40MB; stay well under).
+    const totalBase64 = validAttachments.reduce((n, a) => n + a.content.length, 0)
+    if (totalBase64 > 15_000_000) {
+      return jsonResponse(400, { error: 'attachments too large (max ~10MB)' })
+    }
   }
 
   // Guard: personalized templates must get real per-recipient data from the caller.
@@ -486,6 +508,7 @@ export default async (req: Request, _context: Context) => {
       to,
       subject: renderedSubject,
       html: renderedHtml,
+      ...(validAttachments.length ? { attachments: validAttachments } : {}),
     })
     if (error || !data) {
       console.error('Resend error:', error)
