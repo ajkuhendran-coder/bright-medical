@@ -332,6 +332,18 @@ const TEMPLATES = {
       { key: 'PREHEADER', label: 'Vorschautext im Postfach (optional)', default: 'Eine persönliche Nachricht von Bright Medical.' },
     ],
   },
+  'e-werteliste-frau': {
+    label: '🔬 Werte-Liste senden (Weg B, Frau)',
+    sendAs: 'e-frei',
+    subject: 'Ihre nächsten Schritte: die Laborwerte für Ihre Analyse',
+    attachmentUrl: '/diagnostik/Praxis-Laborwerte-Stoffwechsel-Frau.pdf',
+    attachmentName: 'Praxis-Laborwerte-Stoffwechsel.pdf',
+    fields: [
+      { key: 'ANREDE', label: 'Anrede / Begrüßung', default: 'Guten Tag Frau …,' },
+      { key: 'BODY', label: 'Nachrichtentext (Standard, editierbar)', default: 'vielen Dank für unser Gespräch und dass Sie mit Bright Medical starten möchten, ich freue mich sehr.\n\nSie möchten die Laboruntersuchung selbst über Ihre Klinik durchführen lassen, das ist absolut in Ordnung. Im Anhang finden Sie die Auflistung der Werte, die für Ihre Analyse sinnvoll sind.\n\nErgänzend ist eine Messung der Körperzusammensetzung (BIA) hilfreich, sie zeigt das Verhältnis von Fett- zu Muskelmasse. Falls Sie diese in Ihrer Klinik gleich mitmachen lassen können, ideal. Falls nicht, ist das kein Problem, das machen wir in der Praxis.\n\nSo geht es weiter: Sobald Ihre Ergebnisse vorliegen, melden Sie sich bitte kurz bei mir (einfach Antwort auf diese Mail). Dann veranlasse ich alles Weitere. Die Praxis meldet sich bei Ihnen zur ärztlichen Besprechung Ihrer Ergebnisse und, falls gewünscht, zur Körperanalyse. Anschließend legen wir gemeinsam Ihr Startdatum fest, und Sie erhalten Zahlungslink und Coaching-Vereinbarung.\n\nGerne dürfen Sie mir bei Ihrer Rückmeldung schon einen Wunsch-Starttermin nennen.\n\nBei Fragen antworten Sie einfach auf diese Mail.', textarea: true, hint: 'Standard für Weg B (eigene Labordiagnostik). Das Praxis-PDF wird automatisch angehängt. Logo, Signatur und Footer kommen vom BM-Design.' },
+      { key: 'PREHEADER', label: 'Vorschautext im Postfach (optional)', default: 'Ihre nächsten Schritte und die Laborwerte für Ihre Analyse.' },
+    ],
+  },
   'e1b-reminder-erstgespraech': {
     label: '24h-Reminder Erstgespräch',
     fields: [
@@ -639,6 +651,9 @@ function renderFields() {
   const container = $('varsContainer')
   container.innerHTML = ''
 
+  // Presets können einen Default-Betreff mitbringen (sonst Template-Default greift)
+  if (cfg.subject !== undefined) $('subject').value = cfg.subject
+
   // Quick-pick buttons (z.B. für Programm-Auswahl bei e3a-zahlungslink)
   if (cfg.quickpick && cfg.quickpick.length) {
     const wrap = document.createElement('div')
@@ -740,6 +755,19 @@ function renderHistory() {
   }
 }
 
+// Lädt eine gehostete Datei (z.B. Plan-/Werte-Listen-PDF) und gibt sie base64-kodiert zurück.
+async function fetchAsBase64(url) {
+  const res = await fetch(url)
+  if (!res.ok) throw new Error('Datei nicht erreichbar (HTTP ' + res.status + ')')
+  const bytes = new Uint8Array(await res.arrayBuffer())
+  let binary = ''
+  const chunk = 0x8000
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk))
+  }
+  return btoa(binary)
+}
+
 async function send() {
   const token = getToken()
   if (!token) { showTokenSetup(); return }
@@ -765,8 +793,18 @@ async function send() {
     if (vars.name) body.name = vars.name
     if (vars.personalNote) body.personalNote = vars.personalNote
   } else {
-    body = { template: tpl, to, vars }
+    body = { template: cfg.sendAs || tpl, to, vars }
     if (subject) body.subject = subject
+    // Preset mit gehostetem Anhang (z.B. Werte-Liste): PDF holen + base64 anhängen
+    if (cfg.attachmentUrl) {
+      try {
+        const b64 = await fetchAsBase64(window.location.origin + cfg.attachmentUrl)
+        body.attachments = [{ filename: cfg.attachmentName || 'Anhang.pdf', content: b64 }]
+      } catch (e) {
+        showStatus('err', 'Anhang konnte nicht geladen werden', e.message + '<div class="small">PDF unter ' + cfg.attachmentUrl + ' prüfen.</div>')
+        return
+      }
+    }
   }
 
   $('sendBtn').disabled = true
