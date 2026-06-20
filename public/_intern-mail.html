@@ -401,6 +401,7 @@ const TEMPLATES = {
   'invite-vereinbarung': {
     label: '📄 Coaching-Vertrag senden (Online-Bestätigung)',
     endpoint: '/.netlify/functions/invite-vereinbarung',
+    successLabel: 'Vertrag-Einladung',
     fields: [
       { key: 'paket', label: 'Paket', default: 'vollprogramm', options: [
         { value: 'vollprogramm', text: 'Vollprogramm — 2.990 €' },
@@ -411,6 +412,23 @@ const TEMPLATES = {
       { key: 'anrede', label: 'Anrede / Begrüßung', default: 'Liebe Frau …,' },
       { key: 'name', label: 'Name (Vorbefüllung auf der Bestätigungs-Seite)', default: '' },
       { key: 'personalNote', label: 'Persönliche Notiz (optional)', default: '', textarea: true, hint: 'Optionaler kursiver Block in der Einladungs-Mail.' },
+    ],
+  },
+  'invite-portal': {
+    label: '🔐 Portal-Zugang senden („Mein Programm")',
+    endpoint: '/.netlify/functions/invite-portal',
+    successLabel: 'Portal-Einladung',
+    fields: [
+      { key: 'name', label: 'Vorname (Begrüßung + Portal-Anzeige) — PFLICHT', default: '', short: true, hint: 'z.B. „Sandra". Ohne Vorname lehnt der Server die Einladung ab.' },
+      { key: 'anrede', label: 'Anrede / Begrüßung', default: 'Liebe Frau …,' },
+      { key: 'programLabel', label: 'Programm', default: 'Metabolic Deep-Dive', short: true },
+      { key: 'weekCurrent', label: 'Aktuelle Woche', default: '1', short: true },
+      { key: 'weekTotal', label: 'Wochen gesamt', default: '4', short: true },
+      { key: 'focusTitle', label: 'Wochen-Fokus: Titel (optional)', default: '', short: true },
+      { key: 'focusText', label: 'Wochen-Fokus: Text (optional)', default: '', textarea: true },
+      { key: 'focusStep', label: '„Ihr kleiner Schritt" (optional)', default: '', textarea: true },
+      { key: 'nextCallHuman', label: 'Nächster Termin (optional, Freitext)', default: '', short: true, hint: 'z.B. „Dienstag, 16. Juni · 15:00 Uhr".' },
+      { key: 'personalNote', label: 'Persönliche Notiz in der Mail (optional)', default: '', textarea: true, hint: 'Optionaler kursiver Block in der Einladungs-Mail.' },
     ],
   },
   'e1h-telefon-nachfrage': {
@@ -787,11 +805,16 @@ async function send() {
   const url = useEndpoint ? (window.location.origin + cfg.endpoint) : API_URL
   let body
   if (useEndpoint) {
+    // Generisch: alle Preset-Felder durchreichen (Feld-Key = Body-Key der Function);
+    // bekannte Zahlen-Keys casten, leere Felder weglassen.
     body = { to }
-    if (vars.paket) body.paket = vars.paket
-    if (vars.anrede) body.anrede = vars.anrede
-    if (vars.name) body.name = vars.name
-    if (vars.personalNote) body.personalNote = vars.personalNote
+    const numericKeys = new Set(['weekCurrent', 'weekTotal', 'ttlDays'])
+    for (const f of (cfg.fields || [])) {
+      const raw = vars[f.key]
+      const v = (raw == null ? '' : String(raw)).trim()
+      if (!v) continue
+      body[f.key] = numericKeys.has(f.key) ? Number(v) : v
+    }
   } else {
     body = { template: cfg.sendAs || tpl, to, vars }
     if (subject) body.subject = subject
@@ -824,7 +847,7 @@ async function send() {
     if (res.ok && data.ok) {
       const linkHtml = data.link ? '<code class="link">' + data.link + '</code>' : ''
       const validHtml = data.expHuman ? 'Gültig bis ' + data.expHuman + '<br>' : ''
-      showStatus('ok', '✓ Versendet', (useEndpoint ? 'Vertrag-Einladung' : ('Template <strong>' + (data.template || tpl) + '</strong>')) + ' an <strong>' + data.to + '</strong> versendet.<div class="small">' + validHtml + 'Subject: ' + (data.subject || '–') + '<br>Resend message id: ' + data.messageId + '</div>' + linkHtml)
+      showStatus('ok', '✓ Versendet', (useEndpoint ? (cfg.successLabel || 'Einladung') : ('Template <strong>' + (data.template || tpl) + '</strong>')) + ' an <strong>' + data.to + '</strong> versendet.<div class="small">' + validHtml + 'Subject: ' + (data.subject || '–') + '<br>Resend message id: ' + data.messageId + '</div>' + linkHtml)
       pushHistory({ at: Date.now(), ok: true, template: tpl, to })
     } else if (res.status === 401) {
       showStatus('err', '✗ Token abgelehnt', 'Bearer-Token ist falsch oder abgelaufen. Bitte ändern.')
