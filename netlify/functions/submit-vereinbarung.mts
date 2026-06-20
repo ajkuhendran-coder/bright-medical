@@ -132,7 +132,7 @@ async function buildFilledPdf(f: Felder, meta: { bestaetigtAm: string; ip: strin
   draw(0, 245, 419, f.email)
   // Paket-Häkchen §2 (Seite 1)
   const cy = PAKET_CHECK_Y[f.paketKey]
-  if (cy !== undefined) pages[0]?.drawText('X', { x: 95, y: cy, size: 11, font: fontB, color: teal })
+  if (cy !== undefined) pages[0]?.drawText('X', { x: 64, y: cy, size: 11, font: fontB, color: teal })
 
   // Unterschriftenseite (Index 5): Ort/Datum (online bestätigt) + getippte Unterschrift
   const datumOnly = meta.bestaetigtAm.split(',')[0]
