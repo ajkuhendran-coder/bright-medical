@@ -28,10 +28,10 @@ const TTL_DAYS = 7
 
 // Single source of truth for the packages (must match the Coaching-Vertrag).
 const PAKETE: Record<string, { key: string; label: string; preis: string }> = {
-  deepdive: { key: 'deepdive', label: 'Metabolic Deep-Dive — 4 Wochen', preis: '990 € (einmalig)' },
-  vollprogramm: { key: 'vollprogramm', label: 'Bright Medical Vollprogramm — 12 Wochen', preis: '2.990 € (einmalig)' },
-  raten: { key: 'raten', label: 'Bright Medical Vollprogramm — 12 Wochen (Ratenzahlung)', preis: '3 × 997 € monatlich' },
-  upgrade: { key: 'upgrade', label: 'Upgrade Deep-Dive → Vollprogramm — +8 Wochen', preis: '2.000 € (Anrechnung)' },
+  deepdive: { key: 'deepdive', label: 'Metabolic Deep-Dive · 4 Wochen', preis: '990 € (einmalig)' },
+  vollprogramm: { key: 'vollprogramm', label: 'Bright Medical Vollprogramm · 12 Wochen', preis: '2.990 € (einmalig)' },
+  raten: { key: 'raten', label: 'Bright Medical Vollprogramm · 12 Wochen (Ratenzahlung)', preis: '3 × 997 € monatlich' },
+  upgrade: { key: 'upgrade', label: 'Upgrade Deep-Dive → Vollprogramm · +8 Wochen', preis: '2.000 € (Anrechnung)' },
 }
 
 const CORS_HEADERS = {
@@ -124,7 +124,7 @@ export default async (req: Request, _context: Context) => {
 
   const safeAnrede = escapeHtml(anrede || 'Guten Tag,')
   const safeNote = personalNote ? escapeHtml(personalNote) : ''
-  const subject = 'Ihre Coaching-Vereinbarung — bitte bestätigen'
+  const subject = 'Ihre Coaching-Vereinbarung: bitte bestätigen'
 
   const vars: Record<string, string> = {
     ANREDE: safeAnrede,

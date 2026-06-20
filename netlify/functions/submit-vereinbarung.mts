@@ -71,6 +71,10 @@ const ANLAGEN_PDF = (() => {
   try { return loadBuffer('email-templates/_assets/coaching-vertrag-anlagen.pdf') }
   catch { return null }
 })()
+const EINWILLIGUNG_PDF = (() => {
+  try { return loadBuffer('email-templates/_assets/coaching-vertrag-einwilligung.pdf') }
+  catch { return null }
+})()
 
 // Helvetica/WinAnsi can't encode chars outside Latin-1 (e.g. "→"). Sanitize before drawing.
 function pdfSafe(s: string): string {
@@ -83,12 +87,13 @@ function pdfSafe(s: string): string {
     .replace(/[^\x00-\xFF€]/g, ' ')
 }
 
-// Package checkbox positions on page 1 (y measured from BOTTOM; page height 841.89).
+// Paket-Checkbox-Positionen auf Seite 1 (y von UNTEN; A4 595x842). Kalibriert auf den
+// anwaltlich finalen Vertrag (Stand Juni 2026, 6 Seiten).
 const PAKET_CHECK_Y: Record<string, number> = {
-  deepdive: 252.5,
-  vollprogramm: 234.2,
-  raten: 215.9,
-  upgrade: 197.6,
+  deepdive: 240,
+  vollprogramm: 222,
+  raten: 204,
+  upgrade: 186,
 }
 
 type Felder = {
@@ -119,21 +124,20 @@ async function buildFilledPdf(f: Felder, meta: { bestaetigtAm: string; ip: strin
     p.drawText(pdfSafe(text), { x, y, size, font: f2, color: ink })
   }
 
-  // Page 1: data table (y from bottom)
-  draw(0, 310, 508.9, f.name)
-  draw(0, 310, 490.0, f.anschrift)
-  draw(0, 310, 471.1, f.geburtsdatum)
-  draw(0, 310, 452.2, f.telefon)
-  draw(0, 310, 433.3, f.email)
-  // Package checkmark
+  // Seite 1 (Index 0): Datentabelle §1
+  draw(0, 245, 505, f.name)
+  draw(0, 245, 486, f.anschrift)
+  draw(0, 245, 463, f.geburtsdatum)
+  draw(0, 245, 441, f.telefon)
+  draw(0, 245, 419, f.email)
+  // Paket-Häkchen §2 (Seite 1)
   const cy = PAKET_CHECK_Y[f.paketKey]
-  if (cy !== undefined) pages[0]?.drawText('X', { x: 65.5, y: cy, size: 11, font: fontB, color: teal })
+  if (cy !== undefined) pages[0]?.drawText('X', { x: 95, y: cy, size: 11, font: fontB, color: teal })
 
-  // Page 4: Ort, Datum (client side) — online confirmation date
+  // Unterschriftenseite (Index 5): Ort/Datum (online bestätigt) + getippte Unterschrift
   const datumOnly = meta.bestaetigtAm.split(',')[0]
-  draw(3, 68, 125.9, `Online bestätigt am ${datumOnly}`, 9)
-  // Page 5: typed signature (Name in Druckbuchstaben)
-  draw(4, 68, 727.9, f.signature, 12)
+  draw(5, 95, 713, `Online bestätigt am ${datumOnly}`, 9)
+  draw(5, 100, 690, f.signature, 12)
 
   // --- Protocol page ---
   const W = 595.28, H = 841.89
@@ -244,6 +248,9 @@ export default async (req: Request, _context: Context) => {
   if (ANLAGEN_PDF) {
     attachments.push({ filename: 'Anlagen-Widerruf-Leistung-Datenschutz.pdf', content: ANLAGEN_PDF.toString('base64') })
   }
+  if (EINWILLIGUNG_PDF) {
+    attachments.push({ filename: 'Einwilligung-Gesundheitsdaten.pdf', content: EINWILLIGUNG_PDF.toString('base64') })
+  }
 
   const safeName = escapeHtml(f.name)
   const html = `<!DOCTYPE html><html lang="de"><body style="margin:0;background:#F6F8FA;font-family:'Inter',Arial,sans-serif;">
@@ -254,7 +261,7 @@ export default async (req: Request, _context: Context) => {
 <div style="font-size:11px;font-weight:600;letter-spacing:2.2px;color:#00B8D4;text-transform:uppercase;margin-bottom:14px;">Bestätigt</div>
 <div style="font-family:'Fraunces',Georgia,serif;font-size:28px;line-height:1.15;color:#0A2540;margin-bottom:22px;font-weight:500;">Ihre Vereinbarung ist bestätigt.</div>
 <div style="font-size:15px;line-height:1.65;color:#2A3A52;margin-bottom:18px;">Guten Tag ${safeName},</div>
-<div style="font-size:15px;line-height:1.65;color:#2A3A52;margin-bottom:18px;">vielen Dank — Ihre Coaching-Vereinbarung (${escapeHtml(f.paketLabel)}) ist bestätigt. Im Anhang finden Sie die vollständige, bestätigte Vereinbarung sowie die Anlagen (Widerrufsbelehrung, Leistungsbeschreibung, Datenschutz) als PDF.</div>
+<div style="font-size:15px;line-height:1.65;color:#2A3A52;margin-bottom:18px;">vielen Dank! Ihre Coaching-Vereinbarung (${escapeHtml(f.paketLabel)}) ist bestätigt. Im Anhang finden Sie die vollständige, bestätigte Vereinbarung, die Anlagen (Widerrufsbelehrung, Leistungsbeschreibung, Datenschutz) sowie die gesonderte Einwilligung zur Verarbeitung von Gesundheitsdaten als PDF.</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:rgba(0,184,212,0.06);border-left:3px solid #00B8D4;margin:8px 0 24px;"><tr><td style="padding:16px 18px;font-size:13px;line-height:1.6;color:#2A3A52;">Ihnen steht ein <strong>14-tägiges Widerrufsrecht</strong> zu (ab Vertragsschluss). Die Widerrufsbelehrung liegt als Anlage 1 bei. Bestätigt am ${escapeHtml(bestaetigtAm)}.</td></tr></table>
 <div style="font-size:15px;line-height:1.65;color:#2A3A52;margin-bottom:18px;">Ich melde mich in Kürze persönlich, damit wir gemeinsam starten.</div>
 <div style="font-size:14px;color:#2A3A52;margin-bottom:6px;">Herzliche Grüße,</div>
@@ -271,7 +278,7 @@ export default async (req: Request, _context: Context) => {
       replyTo: REPLY_TO,
       to: f.email,
       bcc: ADMIN_EMAIL,
-      subject: 'Ihre Coaching-Vereinbarung — bestätigt',
+      subject: 'Ihre Coaching-Vereinbarung ist bestätigt',
       html,
       attachments,
     })

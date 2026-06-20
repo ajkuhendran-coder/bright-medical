@@ -235,3 +235,88 @@ export function verifyTerminToken(token: string, secret: string): VerifyTerminRe
   }
   return { ok: true, payload }
 }
+
+// --- Portal-Token (Klient-Portal „Mein Programm", Scope `portal`) ---
+// Trägt die read-only Programm-Daten (Name, Programm, Woche, Fokus, Plan, Termin)
+// im signierten Payload, damit /mein-programm zustandslos bleibt. Foto-Upload +
+// Nachrichten laufen separat über Supabase-gestützte Functions, die das Token dort
+// serverseitig prüfen. TTL großzügig wählen — das Portal begleitet das ganze Programm.
+
+export type PortalPayload = {
+  sub: string                 // Klient-Email
+  iat: number
+  exp: number
+  scope: 'portal'
+  subjectId?: string          // CC-Referenz, z. B. "BM-2026-XXXX"
+  name: string                // Vorname für die Begrüßung, z. B. "Sandra"
+  initials?: string           // Avatar-Kürzel, z. B. "SB"
+  programLabel: string        // "Metabolic Deep-Dive"
+  weekCurrent: number         // aktuelle Woche, z. B. 2
+  weekTotal: number           // Gesamtwochen, z. B. 4
+  chips?: string[]            // Status-Chips, z. B. ["3 Gespräche", "2 Sensoren", "Ihr Plan"]
+  focusTitle?: string         // Wochen-Fokus-Titel, z. B. "Erste Erkenntnisse"
+  focusText?: string          // Wochen-Fokus-Text
+  focusStep?: string          // "Ihr kleiner Schritt"
+  planUrl?: string            // Link/Pfad zum aktuellen Plan-PDF
+  planUpdated?: string        // "vor 2 Tagen"
+  nextCallHuman?: string      // "Dienstag, 16. Juni · 15:00 Uhr"
+  nextCallUrl?: string        // Video-Link
+}
+
+export function signPortalToken(
+  email: string,
+  data: Omit<PortalPayload, 'sub' | 'iat' | 'exp' | 'scope'>,
+  ttlDays: number,
+  secret: string,
+): string {
+  const now = Date.now()
+  const payload: PortalPayload = {
+    sub: email.toLowerCase().trim(),
+    iat: now,
+    exp: now + ttlDays * 24 * 60 * 60 * 1000,
+    scope: 'portal',
+    ...data,
+  }
+  const payloadB64 = b64urlEncode(JSON.stringify(payload))
+  const sig = createHmac('sha256', secret).update(payloadB64).digest()
+  const sigB64 = b64urlEncode(sig)
+  return `${payloadB64}.${sigB64}`
+}
+
+export type VerifyPortalResult =
+  | { ok: true; payload: PortalPayload }
+  | { ok: false; reason: 'malformed' | 'badSignature' | 'expired' | 'wrongScope' }
+
+export function verifyPortalToken(token: string, secret: string): VerifyPortalResult {
+  if (!token || typeof token !== 'string' || !token.includes('.')) {
+    return { ok: false, reason: 'malformed' }
+  }
+  const [payloadB64, sigB64] = token.split('.')
+  if (!payloadB64 || !sigB64) return { ok: false, reason: 'malformed' }
+
+  const expectedSig = createHmac('sha256', secret).update(payloadB64).digest()
+  let providedSig: Buffer
+  try {
+    providedSig = b64urlDecode(sigB64)
+  } catch {
+    return { ok: false, reason: 'malformed' }
+  }
+  if (providedSig.length !== expectedSig.length || !timingSafeEqual(providedSig, expectedSig)) {
+    return { ok: false, reason: 'badSignature' }
+  }
+
+  let payload: PortalPayload
+  try {
+    payload = JSON.parse(b64urlDecode(payloadB64).toString('utf8'))
+  } catch {
+    return { ok: false, reason: 'malformed' }
+  }
+  if (payload.scope !== 'portal') return { ok: false, reason: 'wrongScope' }
+  if (typeof payload.exp !== 'number' || payload.exp < Date.now()) {
+    return { ok: false, reason: 'expired' }
+  }
+  if (!payload.name || !payload.programLabel) {
+    return { ok: false, reason: 'malformed' }
+  }
+  return { ok: true, payload }
+}
