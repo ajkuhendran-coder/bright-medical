@@ -167,6 +167,60 @@ function LockNote({ children }: { children: ReactNode }) {
   )
 }
 
+// PWA-Tags fürs Portal zur Laufzeit einhängen — NUR auf dieser Route; die
+// Marketing-Seite (index.html) bleibt unberührt. Das Manifest wird dynamisch als
+// Blob erzeugt, damit der Zugangs-Token (aus ?t=…) als start_url erhalten bleibt —
+// so öffnet auch eine auf Android installierte Kachel direkt den eigenen Bereich.
+function ensurePortalPwa(): void {
+  if (typeof document === 'undefined') return
+  const head = document.head
+  const setMeta = (name: string, content: string) => {
+    let m = head.querySelector(`meta[name="${name}"]`)
+    if (!m) { m = document.createElement('meta'); m.setAttribute('name', name); head.appendChild(m) }
+    m.setAttribute('content', content)
+  }
+  setMeta('apple-mobile-web-app-capable', 'yes')
+  setMeta('mobile-web-app-capable', 'yes')
+  setMeta('apple-mobile-web-app-status-bar-style', 'default')
+  setMeta('apple-mobile-web-app-title', 'Mein Programm')
+
+  if (!head.querySelector('link[rel="apple-touch-icon"]')) {
+    const l = document.createElement('link')
+    l.rel = 'apple-touch-icon'
+    l.setAttribute('sizes', '180x180')
+    l.href = '/images/portal-icon-180.png'
+    head.appendChild(l)
+  }
+
+  if (!document.getElementById('mp-manifest')) {
+    const origin = window.location.origin
+    // Absolute URLs sind Pflicht: relative Pfade würden gegen die blob:-Basis auflösen.
+    const manifest = {
+      name: 'Mein Programm — Bright Medical',
+      short_name: 'Mein Programm',
+      description: 'Ihr persönlicher, sicherer Bereich bei Bright Medical.',
+      lang: 'de',
+      start_url: window.location.href,
+      scope: `${origin}/mein-programm`,
+      display: 'standalone',
+      orientation: 'portrait',
+      background_color: '#F7F9FB',
+      theme_color: '#F7F9FB',
+      icons: [
+        { src: `${origin}/images/portal-icon-192.png`, sizes: '192x192', type: 'image/png', purpose: 'any' },
+        { src: `${origin}/images/portal-icon-512.png`, sizes: '512x512', type: 'image/png', purpose: 'any' },
+        { src: `${origin}/images/portal-icon-512.png`, sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      ],
+    }
+    const blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' })
+    const link = document.createElement('link')
+    link.id = 'mp-manifest'
+    link.rel = 'manifest'
+    link.href = URL.createObjectURL(blob)
+    head.appendChild(link)
+  }
+}
+
 export default function MeinProgramm() {
   const token = useMemo(readUrlToken, [])
   const payload = useMemo(() => (token ? decodePayload(token) : null), [token])
@@ -188,6 +242,17 @@ export default function MeinProgramm() {
   const [noteText, setNoteText] = useState('')
   const [noteTag, setNoteTag] = useState('Notiz')
   const [writeError, setWriteError] = useState('')
+  // „Zum Startbildschirm"-Tipp: einmalig, wegklickbar (localStorage); nicht in der
+  // bereits installierten App (display-mode standalone / iOS navigator.standalone).
+  const [a2hsOff, setA2hsOff] = useState(() => {
+    try { return localStorage.getItem('mp-a2hs') === 'off' } catch { return false }
+  })
+  const [a2hsOpen, setA2hsOpen] = useState(false)
+  const isStandalone = useMemo(() => {
+    if (typeof window === 'undefined') return false
+    return window.matchMedia?.('(display-mode: standalone)')?.matches === true
+      || (window.navigator as unknown as { standalone?: boolean }).standalone === true
+  }, [])
   // Consent-Gate: Art.-9-Einwilligung vor der ersten Nutzung.
   const [consentState, setConsentState] = useState<'loading' | 'needed' | 'granted'>('loading')
   const [consentBoxes, setConsentBoxes] = useState({ cgm: false, photos: false, questionnaire: false, channel: false })
@@ -210,6 +275,7 @@ export default function MeinProgramm() {
       l.href = 'https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Hanken+Grotesk:wght@400;500;600;700&display=swap'
       document.head.appendChild(l)
     }
+    ensurePortalPwa()
   }, [])
 
   // Verlauf + Tagebuch laden (best-effort; ohne Backend bleiben die Demo-Daten).
@@ -265,6 +331,11 @@ export default function MeinProgramm() {
   }, [token, payload])
 
   const expired = payload ? payload.exp < Date.now() : false
+
+  function dismissA2hs() {
+    setA2hsOff(true)
+    try { localStorage.setItem('mp-a2hs', 'off') } catch { /* ignore */ }
+  }
 
   function sendMessage() {
     const t = draft.trim()
@@ -457,6 +528,32 @@ export default function MeinProgramm() {
                 </div>
                 <div style={{ width: 42, height: 42, borderRadius: '50%', background: INK, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, fontSize: 14 }}>{initials}</div>
               </div>
+
+              {/* Tipp: Zum Startbildschirm — dezent, wegklickbar, nicht in der installierten App */}
+              {!a2hsOff && !isStandalone && (
+                <div style={{ margin: '14px 26px 0' }}>
+                  <div style={{ background: '#F2F8FA', border: '1px solid #DCEEF3', borderRadius: 14, padding: '13px 14px' }}>
+                    <div style={{ display: 'flex', gap: 11, alignItems: 'flex-start' }}>
+                      <span style={{ flex: 'none', width: 30, height: 30, borderRadius: 9, background: '#fff', border: '1px solid #DCEEF3', display: 'flex', alignItems: 'center', justifyContent: 'center', color: ACC_DK }}>
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="4" /><line x1="12" y1="8" x2="12" y2="16" /><line x1="8" y1="12" x2="16" y2="12" /></svg>
+                      </span>
+                      <div style={{ flex: 1, fontSize: 13, lineHeight: 1.5, color: INK }}>
+                        <strong style={{ fontWeight: 600 }}>Immer griffbereit:</strong> Legen Sie sich „Mein Programm" auf den Startbildschirm — dann sind Sie mit einem Tipp hier, wie bei einer App.
+                        <div style={{ marginTop: 7 }}>
+                          <button onClick={() => setA2hsOpen((v) => !v)} style={{ border: 'none', background: 'none', padding: 0, color: ACC_DK, fontWeight: 600, fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit', textDecoration: 'underline' }}>{a2hsOpen ? 'Ausblenden' : 'So geht’s'}</button>
+                        </div>
+                        {a2hsOpen && (
+                          <div style={{ marginTop: 9, fontSize: 12.5, lineHeight: 1.55, color: '#4A6071' }}>
+                            <div style={{ marginBottom: 5 }}><strong style={{ color: INK }}>iPhone (Safari):</strong> unten auf das Teilen-Symbol → „Zum Home-Bildschirm".</div>
+                            <div><strong style={{ color: INK }}>Android (Chrome):</strong> oben rechts auf ⋮ → „Zum Startbildschirm hinzufügen".</div>
+                          </div>
+                        )}
+                      </div>
+                      <button onClick={dismissA2hs} aria-label="Tipp schließen" style={{ flex: 'none', border: 'none', background: 'none', color: '#9FB0BC', cursor: 'pointer', fontSize: 18, lineHeight: 1, fontFamily: 'inherit', marginTop: -2 }}>×</button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Fortschritt */}
               <div style={{ padding: '18px 26px 4px' }}>

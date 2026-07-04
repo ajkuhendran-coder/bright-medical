@@ -142,6 +142,11 @@ Zu Ihrem Bereich:
 ${link}
 
 Der Link ist persönlich für Sie und bis ${expGerman} gültig. Kein Konto, kein Passwort, einfach antippen.
+
+So haben Sie Ihren Bereich immer griffbereit:
+Bewahren Sie diese E-Mail auf – der Link oben ist Ihr persönlicher Zugang.
+• iPhone (Safari): Teilen-Symbol → „Zum Home-Bildschirm"
+• Android (Chrome): Menü ⋮ → „Zum Startbildschirm hinzufügen"
 ${personalNote ? `\n${personalNote}\n` : ''}
 Herzliche Grüße,
 Ajanth Kuhendran
