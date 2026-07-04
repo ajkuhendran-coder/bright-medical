@@ -149,20 +149,6 @@ function compressImage(file: File, maxDim = 1280, quality = 0.82): Promise<strin
 }
 
 // --- kleine Bausteine ---
-function Dot() {
-  return <span style={{ width: 7, height: 7, borderRadius: '50%', background: ACC, flex: 'none', marginTop: 7 }} />
-}
-function PlanItem({ title, detail, last }: { title: string; detail: string; last?: boolean }) {
-  return (
-    <div style={{ display: 'flex', gap: 11, alignItems: 'flex-start', marginBottom: last ? 0 : 13 }}>
-      <Dot />
-      <div>
-        <div style={{ fontSize: 15, fontWeight: 600, color: INK }}>{title}</div>
-        <div style={{ fontSize: 13, color: MUT, marginTop: 2, lineHeight: 1.45 }}>{detail}</div>
-      </div>
-    </div>
-  )
-}
 function CamIcon({ s = 17 }: { s?: number }) {
   return (
     <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -193,28 +179,20 @@ export default function MeinProgramm() {
   const [focusDone, setFocusDone] = useState(false)
   const [draft, setDraft] = useState('')
   const [sent, setSent] = useState(false)
-  // TODO(Supabase): Thread + Tagebuch + Glukose kommen später aus Supabase (EU);
-  // hier Demo-/Client-State zur Darstellung.
-  const [thread, setThread] = useState<ThreadMsg[]>([
-    { from: 'coach', text: 'Hallo Sandra! Toll, dass Sie schon eine Mahlzeit umgestellt haben. Wie hat sich der Abend angefühlt?', time: 'Mo' },
-    { from: 'me', text: 'Hat überraschend gut funktioniert, ich war abends weniger müde.', time: 'Mo' },
-    { from: 'coach', text: 'Sehr schön — genau das sehen wir auch in den Werten. Lassen Sie uns das am Dienstag besprechen.', time: 'Di' },
-  ])
-  const [entries, setEntries] = useState<Entry[]>([
-    { kind: 'day', label: 'Heute · Mi 18. Juni' },
-    { kind: 'entry', time: '08:10', title: 'Frühstück', tag: 'Mahlzeit', detail: 'Skyr mit Beeren & Haferflocken' },
-    { kind: 'entry', time: '12:40', title: 'Spaziergang', tag: 'Bewegung', detail: '25 Min nach dem Mittagessen' },
-    { kind: 'entry', time: '19:20', title: 'Abendessen', tag: 'Mahlzeit', detail: 'Lachs mit Ofengemüse — nach neuem Plan' },
-    { kind: 'day', label: 'Gestern · Di 17. Juni' },
-    { kind: 'entry', time: '07:55', title: 'Frühstück', tag: 'Mahlzeit', detail: 'Vollkornbrot mit Ei & Avocado' },
-    { kind: 'entry', time: '14:10', title: 'Energietief', tag: 'Notiz', detail: 'Nach dem Mittag müde — Kaffee geholfen' },
-    { kind: 'entry', time: '22:30', title: 'Schlaf', tag: 'Schlaf', detail: 'Im Bett, ruhiger als sonst' },
-  ])
+  // Thread + Tagebuch kommen aus Supabase (EU) über portal-thread / portal-diary.
+  // Start LEER — kein Demo-Seed, damit eine echte Klientin nie fremde Daten sieht.
+  const [thread, setThread] = useState<ThreadMsg[]>([])
+  const [entries, setEntries] = useState<Entry[]>([])
   const fileRef = useRef<HTMLInputElement>(null)
   const [noteOpen, setNoteOpen] = useState(false)
   const [noteText, setNoteText] = useState('')
   const [noteTag, setNoteTag] = useState('Notiz')
   const [writeError, setWriteError] = useState('')
+  // Consent-Gate: Art.-9-Einwilligung vor der ersten Nutzung.
+  const [consentState, setConsentState] = useState<'loading' | 'needed' | 'granted'>('loading')
+  const [consentBoxes, setConsentBoxes] = useState({ cgm: false, photos: false, questionnaire: false, channel: false })
+  const [consentSubmitting, setConsentSubmitting] = useState(false)
+  const [consentError, setConsentError] = useState('')
 
   useEffect(() => {
     document.title = 'Mein Programm | Bright Medical'
@@ -272,6 +250,19 @@ export default function MeinProgramm() {
 
   useEffect(() => { void loadThread() }, [loadThread])
   useEffect(() => { void loadDiary() }, [loadDiary])
+
+  // Einwilligungs-Status prüfen — Gate nur zeigen, wenn noch keine Einwilligung vorliegt.
+  useEffect(() => {
+    if (!token || !payload) return
+    let alive = true
+    fetch('/.netlify/functions/portal-consent-status', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => { if (alive) setConsentState(data?.consented ? 'granted' : 'needed') })
+      .catch(() => { if (alive) setConsentState('needed') }) // im Zweifel: Gate zeigen
+    return () => { alive = false }
+  }, [token, payload])
 
   const expired = payload ? payload.exp < Date.now() : false
 
@@ -341,6 +332,22 @@ export default function MeinProgramm() {
     }
   }
 
+  function submitConsent() {
+    if (!consentBoxes.photos || !consentBoxes.channel || consentSubmitting) return
+    setConsentSubmitting(true)
+    setConsentError('')
+    fetch('/.netlify/functions/submit-portal-einwilligung', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, ...consentBoxes }),
+    })
+      .then((res) => {
+        if (res.ok) setConsentState('granted')
+        else setConsentError('Einwilligung konnte nicht gespeichert werden. Bitte erneut versuchen.')
+      })
+      .catch(() => setConsentError('Verbindung fehlgeschlagen. Bitte erneut versuchen.'))
+      .finally(() => setConsentSubmitting(false))
+  }
+
   // ---- Ungültiger / abgelaufener Link ----
   if (!token || !payload || expired) {
     return (
@@ -358,10 +365,65 @@ export default function MeinProgramm() {
     )
   }
 
+  // ---- Consent-Gate: Art.-9-Einwilligung vor der ersten Nutzung ----
+  if (consentState !== 'granted') {
+    const canSubmit = consentBoxes.photos && consentBoxes.channel && !consentSubmitting
+    const items: { key: keyof typeof consentBoxes; label: string }[] = [
+      { key: 'cgm', label: 'Verarbeitung meiner CGM-/Glukosedaten zur individuellen Auswertung und Beratung' },
+      { key: 'photos', label: 'Verarbeitung von Fotos meines Ernährungstagebuchs zur individuellen Ernährungsanalyse' },
+      { key: 'questionnaire', label: 'Verarbeitung gesundheitsbezogener Angaben aus Fragebögen und Coaching-Gesprächen' },
+      { key: 'channel', label: 'Übermittlung dieser Daten über den sicheren, verschlüsselten Kanal von Bright Medical' },
+    ]
+    return (
+      <div className="mp-page" style={{ alignItems: 'center' }}>
+        <div className="mp-app" style={{ justifyContent: 'flex-start' }}>
+          <div style={{ flex: 'none', padding: 'calc(env(safe-area-inset-top) + 18px) 26px 8px' }}>
+            <img src="/images/bright-medical-portal-logo.png" alt="Bright Medical" style={{ height: 27, width: 'auto', display: 'block' }} />
+          </div>
+          <div className="mp-scroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '8px 26px 26px' }}>
+            {consentState === 'loading' ? (
+              <div style={{ textAlign: 'center', color: MUT, fontSize: 14, padding: '60px 0' }}>Einen Moment …</div>
+            ) : (
+              <>
+                <h1 style={{ ...serif, fontSize: 23, color: INK, margin: '10px 0 6px' }}>Einverständnis für Ihre Gesundheitsdaten</h1>
+                <p style={{ fontSize: 14, lineHeight: 1.6, color: '#4A6071', marginBottom: 18 }}>
+                  Guten Tag {payload.name}, damit Ihr Coach mit Ihren Gesundheitsdaten arbeiten darf, brauchen wir einmalig Ihre Einwilligung (Art. 9 DSGVO). Sie ist <strong>freiwillig</strong> und jederzeit widerrufbar.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+                  {items.map((it) => {
+                    const on = consentBoxes[it.key]
+                    return (
+                      <button key={it.key} type="button" onClick={() => setConsentBoxes((b) => ({ ...b, [it.key]: !b[it.key] }))}
+                        style={{ display: 'flex', gap: 11, alignItems: 'flex-start', textAlign: 'left', width: '100%', cursor: 'pointer', fontFamily: 'inherit', background: on ? '#F2FAFC' : '#fff', border: `1.5px solid ${on ? ACC : '#DEE6EC'}`, borderRadius: 12, padding: '13px 14px' }}>
+                        <span style={{ width: 22, height: 22, flex: 'none', borderRadius: 6, marginTop: 1, border: `1.5px solid ${on ? ACC : '#C4D0D9'}`, background: on ? ACC : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+                          {on && <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>}
+                        </span>
+                        <span style={{ fontSize: 13.5, lineHeight: 1.5, color: INK }}>{it.label}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+                <p style={{ fontSize: 12, lineHeight: 1.55, color: '#8295A2' }}>
+                  Verantwortlich: Bright Medical, Ajanth Kuhendran, Bruchsal. Die Verarbeitung erfolgt ausschließlich für Ihr Coaching. Widerruf jederzeit per E-Mail an <a href="mailto:info@brightmedical.de" style={{ color: ACC_DK }}>info@brightmedical.de</a> mit Wirkung für die Zukunft. Foto-Tagebuch und sicherer Kanal sind für die Portal-Nutzung erforderlich.
+                </p>
+                {consentError && <div style={{ margin: '12px 0 0', padding: '9px 13px', background: '#FDECEC', border: '1px solid #F5C6C6', borderRadius: 10, color: '#B42318', fontSize: 13 }}>{consentError}</div>}
+                <button onClick={submitConsent} disabled={!canSubmit}
+                  style={{ marginTop: 16, width: '100%', fontFamily: 'inherit', fontSize: 15, fontWeight: 600, padding: 15, borderRadius: 12, border: 'none', cursor: canSubmit ? 'pointer' : 'default', background: canSubmit ? INK : '#B9C6CF', color: '#fff' }}>
+                  {consentSubmitting ? 'Wird gespeichert …' : 'Einwilligung erteilen'}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+        <PortalStyles />
+      </div>
+    )
+  }
+
   const initials = payload.initials || payload.name.slice(0, 2).toUpperCase()
-  const focusTitle = payload.focusTitle || 'Erste Erkenntnisse'
-  const focusText = payload.focusText || 'Ihre Werte nach dem Abendessen werden schon ruhiger. Daran setzen wir an.'
-  const focusStep = payload.focusStep || 'Eine Mahlzeit nach dem neuen Plan ausprobieren.'
+  const focusTitle = payload.focusTitle || 'Willkommen'
+  const focusText = payload.focusText || 'Ihr Coach hinterlegt hier jede Woche Ihren Fokus. Es geht gleich los.'
+  const focusStep = payload.focusStep || 'Wir starten gemeinsam im ersten Gespräch.'
 
   const navColor = (t: Tab) => (tab === t ? INK : OFF)
   const navWeight = (t: Tab) => (tab === t ? 600 : 500)
@@ -428,25 +490,17 @@ export default function MeinProgramm() {
                 </button>
               </div>
 
-              {/* Glukose */}
+              {/* Glukose-Sensor — Auswertung im Gespräch, KEINE Live-Anbindung im Portal (keine erfundenen Werte) */}
               <div className="mp-card" style={{ margin: '14px 26px 0', padding: '20px 22px 18px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                  <span style={{ fontSize: 15, fontWeight: 600, color: INK }}>Glukose · letzte 24 h</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <span style={{ fontSize: 15, fontWeight: 600, color: INK }}>Ihr Glukose-Sensor</span>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 600, color: ACC, background: '#E7F6FA', padding: '4px 9px', borderRadius: 20 }}>
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: ACC, display: 'inline-block' }} />2 Sensoren
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: ACC, display: 'inline-block' }} />FreeStyle Libre
                   </span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
-                  <span style={{ fontSize: 30, fontWeight: 600, color: INK, letterSpacing: '-.02em' }}>98</span>
-                  <span style={{ fontSize: 13, color: MUT }}>mg/dL</span>
-                  <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 600, color: OK }}>stabiler abends ↘</span>
+                <div style={{ fontSize: 14, lineHeight: 1.55, color: '#4A6071' }}>
+                  Tragen Sie den Sensor einfach wie besprochen weiter — Ihre Werte schauen wir uns gemeinsam im Video-Gespräch an.
                 </div>
-                <svg viewBox="0 0 320 88" width="100%" height="78" preserveAspectRatio="none" style={{ display: 'block', marginTop: 6 }}>
-                  <defs><linearGradient id="hGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={ACC} stopOpacity="0.18" /><stop offset="1" stopColor={ACC} stopOpacity="0" /></linearGradient></defs>
-                  <path d="M0 58 C30 56 48 36 70 34 S110 62 132 60 S168 26 192 32 S230 56 252 54 S292 40 320 44 L320 88 L0 88 Z" fill="url(#hGrad)" />
-                  <path d="M0 58 C30 56 48 36 70 34 S110 62 132 60 S168 26 192 32 S230 56 252 54 S292 40 320 44" fill="none" stroke={ACC} strokeWidth="2.4" strokeLinecap="round" />
-                </svg>
-                <div style={{ fontSize: 12, color: '#8295A2', marginTop: 10 }}>Aus FreeStyle Libre · besprechen wir im Gespräch</div>
               </div>
 
               {/* Nächstes Gespräch */}
@@ -475,8 +529,8 @@ export default function MeinProgramm() {
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
                 </span>
                 <span style={{ flex: 1 }}>
-                  <span style={{ display: 'block', fontSize: 15, fontWeight: 600, color: INK }}>Ihr Ernährungs- & Lifestyle-Plan</span>
-                  <span style={{ display: 'block', fontSize: 13, color: MUT, marginTop: 2 }}>Aktualisiert {payload.planUpdated || 'kürzlich'}</span>
+                  <span style={{ display: 'block', fontSize: 15, fontWeight: 600, color: INK }}>Ihr Ernährungs- &amp; Lifestyle-Plan</span>
+                  <span style={{ display: 'block', fontSize: 13, color: MUT, marginTop: 2 }}>{payload.planUpdated ? `Aktualisiert ${payload.planUpdated}` : 'Folgt nach dem Kickoff'}</span>
                 </span>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9FB0BC" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
               </button>
@@ -574,6 +628,11 @@ export default function MeinProgramm() {
                     </div>
                   )
                 )}
+                {entries.length === 0 && (
+                  <div style={{ padding: '34px 6px', textAlign: 'center', color: MUT, fontSize: 14, lineHeight: 1.6 }}>
+                    Noch keine Einträge.<br />Halten Sie Ihre erste Mahlzeit mit „Foto" oder „Eintrag" fest.
+                  </div>
+                )}
               </div>
               <div style={{ margin: '18px 26px 0', textAlign: 'center', fontSize: 12, color: '#A9B7C1' }}>🔒 Verschlüsselt in der EU — Ihre Einträge und Fotos sieht nur Ihr Coach.</div>
             </div>
@@ -584,40 +643,18 @@ export default function MeinProgramm() {
             <div style={{ padding: '0 0 18px', animation: 'mp-rise .35s ease' }}>
               <div style={{ padding: '14px 26px 8px' }}>
                 <div style={{ ...serif, fontSize: 26, color: INK }}>Ihr Plan</div>
-                <div style={{ fontSize: 13, color: MUT, marginTop: 2 }}>Ernährung & Lifestyle · v3 · {payload.planUpdated || 'aktuell'}</div>
+                <div style={{ fontSize: 13, color: MUT, marginTop: 2 }}>Ernährung &amp; Lifestyle</div>
               </div>
 
-              <div style={{ margin: '14px 26px 0', padding: '20px 22px', background: INK, borderRadius: 18, color: '#fff' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                  <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(255,255,255,.14)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, fontSize: 12 }}>AJ</div>
-                  <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: '.06em', color: '#9DC6D6', textTransform: 'uppercase' }}>Notiz von Ajanth</div>
+              {/* Platzhalter — der echte, individuelle Plan wird nach dem Kickoff eingestellt (keine Demo-Empfehlungen) */}
+              <div className="mp-card" style={{ margin: '14px 26px 0', padding: '30px 22px', textAlign: 'center' }}>
+                <div style={{ width: 48, height: 48, borderRadius: 13, background: '#EAF0F4', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: INK, marginBottom: 14 }}>
+                  <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
                 </div>
-                <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontStyle: 'italic', fontSize: 17, lineHeight: 1.5, color: '#EAF2F6' }}>„Wir verschieben das Abendessen etwas nach vorn und reduzieren schnelle Kohlenhydrate. Die Werte schauen wir uns am Dienstag gemeinsam an."</div>
-              </div>
-
-              <div className="mp-card" style={{ margin: '14px 26px 0', padding: '20px 22px' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.12em', color: ACC, textTransform: 'uppercase', marginBottom: 14 }}>Morgens</div>
-                <PlanItem title="Eiweißreiches Frühstück" detail="Skyr, Beeren, Haferflocken — sättigt und hält die Werte ruhig." />
-                <PlanItem title="Erst Licht & Bewegung, dann Kaffee" detail="5 Minuten ans Fenster oder vor die Tür." last />
-              </div>
-
-              <div className="mp-card" style={{ margin: '14px 26px 0', padding: '20px 22px' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.12em', color: ACC, textTransform: 'uppercase', marginBottom: 14 }}>Mittags</div>
-                <PlanItem title="Gemüse zuerst" detail="Erst Gemüse & Eiweiß, dann Beilage — flachere Kurve." />
-                <PlanItem title="10 Min Spaziergang danach" detail="Glättet den Anstieg nach dem Essen spürbar." last />
-              </div>
-
-              <div style={{ position: 'relative', margin: '24px 26px 0', padding: '20px 22px', background: '#fff', border: `2px solid ${ACC}`, borderRadius: 18 }}>
-                <span style={{ position: 'absolute', top: -10, left: 20, background: ACC, color: '#fff', fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', padding: '3px 9px', borderRadius: 20 }}>Fokus diese Woche</span>
-                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.12em', color: ACC, textTransform: 'uppercase', marginBottom: 14 }}>Abends</div>
-                <PlanItem title="Abendessen vor 19:30 Uhr" detail="Mehr Abstand zur Nachtruhe = ruhigere Nachtwerte." />
-                <PlanItem title="Wenig schnelle Kohlenhydrate" detail="Lieber Eiweiß & Gemüse — z. B. Lachs mit Ofengemüse." last />
-              </div>
-
-              <div className="mp-card" style={{ margin: '14px 26px 0', padding: '20px 22px' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.12em', color: ACC, textTransform: 'uppercase', marginBottom: 14 }}>Bewegung & Schlaf</div>
-                <PlanItem title="7.000 Schritte am Tag" detail="Verteilt über den Tag, kein Leistungssport nötig." />
-                <PlanItem title="Feste Schlafenszeit" detail="Möglichst gleiche Uhrzeit — auch am Wochenende." last />
+                <div style={{ ...serif, fontSize: 20, color: INK, marginBottom: 9 }}>Ihr Plan folgt in Kürze</div>
+                <div style={{ fontSize: 14.5, lineHeight: 1.6, color: '#4A6071', maxWidth: 300, margin: '0 auto' }}>
+                  Ihren persönlichen Ernährungs- &amp; Lifestyle-Plan bespricht Ajanth mit Ihnen im ersten Gespräch und stellt ihn danach hier für Sie ein.
+                </div>
               </div>
             </div>
           )}
@@ -634,7 +671,11 @@ export default function MeinProgramm() {
               </div>
 
               <div style={{ padding: '20px 26px 8px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{ textAlign: 'center', fontSize: 11, fontWeight: 600, letterSpacing: '.1em', color: '#A9B7C1', textTransform: 'uppercase' }}>Diese Woche</div>
+                {thread.length === 0 && (
+                  <div style={{ padding: '26px 6px', textAlign: 'center', fontSize: 14, lineHeight: 1.6, color: MUT }}>
+                    Noch keine Nachrichten. Schreiben Sie Ajanth gern — er meldet sich.
+                  </div>
+                )}
                 {thread.map((m, i) => {
                   const me = m.from === 'me'
                   return (
@@ -651,8 +692,8 @@ export default function MeinProgramm() {
               <div style={{ margin: '18px 26px 0', padding: '14px 16px', background: '#F2F8FA', border: '1px solid #DCEEF3', borderRadius: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{ color: ACC, flex: 'none', display: 'flex' }}><CamIcon s={22} /></span>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: INK }}>Video-Gespräch · {payload.nextCallHuman ? payload.nextCallHuman.split('·')[0].trim() : 'Termin folgt'}</div>
-                  <div style={{ fontSize: 12.5, color: MUT }}>15:00 Uhr · ca. 30 Min</div>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: INK }}>Video-Gespräch</div>
+                  <div style={{ fontSize: 12.5, color: MUT }}>{payload.nextCallHuman || 'Termin stimmen wir ab'}</div>
                 </div>
                 <a href={payload.nextCallUrl || undefined} target={payload.nextCallUrl ? '_blank' : undefined} rel="noreferrer" style={{ flex: 'none', border: 'none', background: ACC, color: '#fff', fontFamily: 'inherit', fontSize: 13, fontWeight: 600, padding: '9px 14px', borderRadius: 10, cursor: 'pointer', textDecoration: 'none' }}>Beitreten</a>
               </div>

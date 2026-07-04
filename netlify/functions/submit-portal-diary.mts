@@ -10,6 +10,7 @@ import type { Context } from '@netlify/functions'
 import { randomUUID } from 'node:crypto'
 import { verifyPortalToken, tokenIdShort } from './_shared/jwt.js'
 import { notifyCC } from './_shared/notify-cc.ts'
+import { notifyAdminPortalActivity } from './_shared/notify-admin.ts'
 import { getSupabaseCreds, sbInsert, sbUpload, sbSignedUrl } from './_shared/supabase.ts'
 
 const MAX_TITLE = 200
@@ -121,6 +122,8 @@ export default async (req: Request, _context: Context) => {
       hasPhoto: !!photoPath,
     },
   })
+  // CC-unabhängiger Fallback: Dr. K direkt per Mail an info@ benachrichtigen.
+  await notifyAdminPortalActivity({ kind: 'Tagebuch-Eintrag', clientSub: payload.sub, clientName: payload.name, preview: `${tag}: ${title}${photoPath ? ' (mit Foto)' : ''}` })
 
   console.log(`✓ Portal-Tagebuch: ${payload.sub} (${tag}${photoPath ? '+Foto' : ''}, token=${tokenIdShort(token)})`)
   return jsonResponse(200, {

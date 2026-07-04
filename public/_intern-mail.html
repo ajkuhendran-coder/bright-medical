@@ -431,6 +431,27 @@ const TEMPLATES = {
       { key: 'personalNote', label: 'Persönliche Notiz in der Mail (optional)', default: '', textarea: true, hint: 'Optionaler kursiver Block in der Einladungs-Mail.' },
     ],
   },
+  'e-prog-welcome-deepdive': {
+    label: '🎉 Programm-Welcome Tag 0 + Woche 1 (Deep-Dive)',
+    sendAs: 'e-frei',
+    subject: 'Willkommen bei Bright Medical: Ihr Deep-Dive startet',
+    fields: [
+      { key: 'ANREDE', label: 'Anrede / Begrüßung', default: 'Liebe Frau …,' },
+      { key: 'BODY', label: 'Welcome-Text (Standard, pro Klientin anpassbar)', default: 'schön, dass Sie sich für den Metabolic Deep-Dive entschieden haben. Ab heute schauen wir in den nächsten vier Wochen gemeinsam genau hin: wie Ihr Körper reagiert, was Ihnen guttut und was Sie konkret im Alltag verändern können.\n\nIhre vier Wochen auf einen Blick\n• Woche 1: Kickoff-Gespräch und Start Ihrer Glukose-Beobachtung\n• Woche 2: Wir besprechen Ihre ersten Beobachtungen, Sie erhalten Ihren Basis-Ernährungsplan\n• Woche 3: Umsetzung im Alltag, ich bleibe per WhatsApp an Ihrer Seite\n• Woche 4: Abschlussgespräch, Rückblick und Ihr persönlicher Eigenplan für danach\n\nSo läuft unser Austausch\n• Ihr Foto-Ernährungstagebuch und alles rund um Ihre Gesundheitsdaten führen Sie in Ihrem persönlichen Bereich „Mein Programm" (den Zugangslink haben Sie gestern erhalten). Dort ist alles verschlüsselt in der EU gespeichert.\n• Für Organisatorisches und einen kurzen Gruß zwischendurch bin ich per WhatsApp da.\n• Unsere Gespräche laufen als Video-Call über Google Meet.\n\nDiese Woche (Woche 1): Ankommen und beobachten\nDiese Woche geht es nur ums Hinschauen: Leben Sie normal weiter, der Sensor misst mit. Den genauen Termin für unser Kickoff-Gespräch stimmen wir diese Woche kurz per WhatsApp ab.\n\nIhr erster kleiner Schritt\nLegen Sie Ihren Sensor an (die Anleitung liegt bei) und essen Sie einfach Ihren ganz normalen Alltag. Mehr braucht es diese Woche nicht.\n\nBei Fragen erreichen Sie mich jederzeit per Antwort auf diese Mail oder über WhatsApp.', textarea: true, hint: 'Tag-0-Welcome für den Deep-Dive, mit integriertem Woche-1-Anker. Logo/Signatur/Footer kommen vom Design. Portal-Link kam separat mit der Portal-Einladung.' },
+      { key: 'HINWEIS', label: 'Sicherheits-Hinweis (hellblau hervorgehoben)', default: 'Bright Medical ist ein Coaching-Angebot und ersetzt keine ärztliche Behandlung; ärztliche Leistungen laufen getrennt über die Praxis. Falls Sie Medikamente einnehmen, die den Blutzucker beeinflussen, besprechen Sie größere Ernährungsumstellungen bitte vorab mit Ihrem behandelnden Arzt.', textarea: true, hint: 'Für diese Klientin wichtig (Mounjaro). Nicht ohne Rücksprache entfernen.' },
+      { key: 'PREHEADER', label: 'Vorschautext im Postfach', default: 'Vier fokussierte Wochen. Hier sind Ihre nächsten Schritte.' },
+    ],
+  },
+  'e-wochen-anker': {
+    label: '🧭 Wochen-Anker (Montag, Woche 2–4)',
+    sendAs: 'e-frei',
+    subject: 'Ihre Woche bei Bright Medical',
+    fields: [
+      { key: 'ANREDE', label: 'Anrede / Begrüßung', default: 'Guten Tag Frau …,' },
+      { key: 'BODY', label: 'Anker-Text (Gerüst — [Klammern] pro Woche füllen)', default: 'Woche [N] von 4\n\n[Wo Sie stehen – ein individueller Satz, z. B. „Ihre Morgenwerte sind diese Woche schon ruhiger, schön zu sehen."]\n\nIhr Fokus diese Woche\n[Fokus-Text, ein bis zwei Sätze, individuell auf Ihre Beobachtungen bezogen]\n\nWas diese Woche ansteht\n• [z. B. unser Video-Gespräch]\n• [z. B. neuen Sensor anlegen]\n\nIhr kleiner Schritt diese Woche\n[Ein konkreter kleiner Schritt]\n\nWie immer: Fragen jederzeit per WhatsApp oder Antwort auf diese Mail.', textarea: true, hint: 'FernUSG: „Wo Sie stehen" + Fokus IMMER individuell an echte Beobachtungen anpassen — kein fixer Lehrplan. Betreff oben pro Woche anpassen (z. B. „Woche 2: Erste Erkenntnisse").' },
+      { key: 'PREHEADER', label: 'Vorschautext im Postfach', default: 'Ihr Wochen-Fokus und was ansteht.' },
+    ],
+  },
   'e1h-telefon-nachfrage': {
     label: '📞 Telefonnummer erfragen',
     fields: [

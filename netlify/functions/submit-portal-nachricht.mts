@@ -8,6 +8,7 @@
 import type { Context } from '@netlify/functions'
 import { verifyPortalToken, tokenIdShort } from './_shared/jwt.js'
 import { notifyCC } from './_shared/notify-cc.ts'
+import { notifyAdminPortalActivity } from './_shared/notify-admin.ts'
 import { getSupabaseCreds, sbInsert } from './_shared/supabase.ts'
 
 const MAX_LEN = 2000
@@ -87,6 +88,8 @@ export default async (req: Request, _context: Context) => {
       preview: text.slice(0, 140),
     },
   })
+  // CC-unabhängiger Fallback: Dr. K direkt per Mail an info@ benachrichtigen.
+  await notifyAdminPortalActivity({ kind: 'Nachricht', clientSub: payload.sub, clientName: payload.name, preview: text.slice(0, 140) })
 
   console.log(`✓ Portal-Nachricht: ${payload.sub} (token=${tokenIdShort(token)})`)
   return jsonResponse(200, { ok: true, message: { id: inserted?.id, text, created_at: inserted?.created_at } })
