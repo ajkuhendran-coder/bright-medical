@@ -44,6 +44,10 @@ type Entry =
   | { kind: 'day'; label: string }
   | { kind: 'entry'; time: string; title: string; tag: string; detail: string; photo?: string }
 
+// Plan-Bausteine (festes Vokabular, kommen als JSONB aus portal_plans — bewusst lose typisiert).
+type PlanSectionData = { type: string; title?: string; body?: string; items?: string[] }
+type PlanData = { title: string; intro: string | null; sections: PlanSectionData[]; version: number; updatedAt: string }
+
 const TAG_COLORS: Record<string, [string, string]> = {
   Mahlzeit: ['#E7F6FA', '#0E7E9C'],
   Foto: ['#E7F6FA', '#0E7E9C'],
@@ -167,6 +171,58 @@ function LockNote({ children }: { children: ReactNode }) {
   )
 }
 
+// Plan-Datum menschlich (Europe/Berlin).
+function formatPlanDate(iso: string): string {
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return ''
+  return d.toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Berlin' })
+}
+
+// Ein Plan-Baustein rendern (heading/text/list/meal/training/note; unbekannt → als Text).
+function PlanSection({ s }: { s: PlanSectionData }) {
+  const items = Array.isArray(s.items) ? s.items.filter((x) => typeof x === 'string' && x.trim()) : []
+  if (s.type === 'heading') {
+    return <div style={{ ...serif, fontSize: 18, color: INK, margin: '20px 0 2px' }}>{s.title}</div>
+  }
+  if (s.type === 'note') {
+    return <div style={{ margin: '12px 0 0', padding: '12px 14px', background: '#F2F8FA', border: '1px solid #DCEEF3', borderRadius: 12, fontSize: 13, lineHeight: 1.55, color: '#4A6071' }}>{s.body}</div>
+  }
+  if (s.type === 'meal' || s.type === 'training') {
+    const isMeal = s.type === 'meal'
+    return (
+      <div className="mp-card" style={{ margin: '12px 0 0', padding: '16px 18px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: s.body || items.length ? 10 : 0 }}>
+          <span style={{ flex: 'none', width: 30, height: 30, borderRadius: 9, background: isMeal ? '#E7F6FA' : '#E8F5EE', display: 'flex', alignItems: 'center', justifyContent: 'center', color: isMeal ? ACC_DK : OK }}>
+            {isMeal ? (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2a2 2 0 0 0 2-2V2" /><path d="M7 2v20" /><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" /></svg>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m6.5 6.5 11 11" /><path d="m21 21-1-1" /><path d="m3 3 1 1" /><path d="m18 22 4-4" /><path d="m2 6 4-4" /><path d="m3 10 7-7" /><path d="m14 21 7-7" /></svg>
+            )}
+          </span>
+          <span style={{ fontSize: 15, fontWeight: 600, color: INK }}>{s.title}</span>
+        </div>
+        {s.body && <div style={{ fontSize: 14, lineHeight: 1.55, color: '#4A6071', marginBottom: items.length ? 8 : 0 }}>{s.body}</div>}
+        {items.length > 0 && (
+          <ul style={{ margin: 0, paddingLeft: 18 }}>
+            {items.map((it, i) => <li key={i} style={{ fontSize: 14, lineHeight: 1.6, color: INK, marginBottom: 2 }}>{it}</li>)}
+          </ul>
+        )}
+      </div>
+    )
+  }
+  if (s.type === 'list') {
+    return (
+      <div style={{ margin: '12px 0 0' }}>
+        {s.title && <div style={{ fontSize: 14, fontWeight: 600, color: INK, marginBottom: 6 }}>{s.title}</div>}
+        <ul style={{ margin: 0, paddingLeft: 18 }}>
+          {items.map((it, i) => <li key={i} style={{ fontSize: 14, lineHeight: 1.6, color: '#4A6071', marginBottom: 2 }}>{it}</li>)}
+        </ul>
+      </div>
+    )
+  }
+  return <div style={{ fontSize: 14.5, lineHeight: 1.6, color: '#4A6071', margin: '10px 0 0' }}>{s.body}</div>
+}
+
 // PWA-Tags fürs Portal zur Laufzeit einhängen — NUR auf dieser Route; die
 // Marketing-Seite (index.html) bleibt unberührt. Das Manifest wird dynamisch als
 // Blob erzeugt, damit der Zugangs-Token (aus ?t=…) als start_url erhalten bleibt —
@@ -237,6 +293,7 @@ export default function MeinProgramm() {
   // Start LEER — kein Demo-Seed, damit eine echte Klientin nie fremde Daten sieht.
   const [thread, setThread] = useState<ThreadMsg[]>([])
   const [entries, setEntries] = useState<Entry[]>([])
+  const [plan, setPlan] = useState<PlanData | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const [noteOpen, setNoteOpen] = useState(false)
   const [noteText, setNoteText] = useState('')
@@ -314,8 +371,21 @@ export default function MeinProgramm() {
     } catch { /* Preview/offline → Demo-Einträge behalten */ }
   }, [token])
 
+  const loadPlan = useCallback(async () => {
+    if (!token) return
+    try {
+      const res = await fetch('/.netlify/functions/portal-plan', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }),
+      })
+      if (!res.ok) return
+      const data = await res.json()
+      if (data?.configured && data.plan) setPlan(data.plan as PlanData)
+    } catch { /* offline → kein Plan, Platzhalter bleibt */ }
+  }, [token])
+
   useEffect(() => { void loadThread() }, [loadThread])
   useEffect(() => { void loadDiary() }, [loadDiary])
+  useEffect(() => { void loadPlan() }, [loadPlan])
 
   // Einwilligungs-Status prüfen — Gate nur zeigen, wenn noch keine Einwilligung vorliegt.
   useEffect(() => {
@@ -740,19 +810,28 @@ export default function MeinProgramm() {
             <div style={{ padding: '0 0 18px', animation: 'mp-rise .35s ease' }}>
               <div style={{ padding: '14px 26px 8px' }}>
                 <div style={{ ...serif, fontSize: 26, color: INK }}>Ihr Plan</div>
-                <div style={{ fontSize: 13, color: MUT, marginTop: 2 }}>Ernährung &amp; Lifestyle</div>
+                <div style={{ fontSize: 13, color: MUT, marginTop: 2 }}>Ernährung &amp; Training</div>
               </div>
 
-              {/* Platzhalter — der echte, individuelle Plan wird nach dem Kickoff eingestellt (keine Demo-Empfehlungen) */}
-              <div className="mp-card" style={{ margin: '14px 26px 0', padding: '30px 22px', textAlign: 'center' }}>
-                <div style={{ width: 48, height: 48, borderRadius: 13, background: '#EAF0F4', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: INK, marginBottom: 14 }}>
-                  <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+              {plan ? (
+                <div style={{ padding: '4px 26px 0', animation: 'mp-rise .3s ease' }}>
+                  {plan.title && <div style={{ ...serif, fontSize: 20, color: INK, margin: '6px 0 2px' }}>{plan.title}</div>}
+                  {plan.intro && <div style={{ fontSize: 14.5, lineHeight: 1.6, color: '#4A6071', margin: '4px 0 2px' }}>{plan.intro}</div>}
+                  {plan.sections.map((s, i) => <PlanSection key={i} s={s} />)}
+                  {plan.updatedAt && <div style={{ margin: '20px 0 0', textAlign: 'center', fontSize: 12, color: '#A9B7C1' }}>🔒 Aktualisiert am {formatPlanDate(plan.updatedAt)} · verschlüsselt in der EU</div>}
                 </div>
-                <div style={{ ...serif, fontSize: 20, color: INK, marginBottom: 9 }}>Ihr Plan folgt in Kürze</div>
-                <div style={{ fontSize: 14.5, lineHeight: 1.6, color: '#4A6071', maxWidth: 300, margin: '0 auto' }}>
-                  Ihren persönlichen Ernährungs- &amp; Lifestyle-Plan bespricht Ajanth mit Ihnen im ersten Gespräch und stellt ihn danach hier für Sie ein.
+              ) : (
+                /* Platzhalter — bis Ajanth den individuellen Plan einstellt (keine Demo-Empfehlungen) */
+                <div className="mp-card" style={{ margin: '14px 26px 0', padding: '30px 22px', textAlign: 'center' }}>
+                  <div style={{ width: 48, height: 48, borderRadius: 13, background: '#EAF0F4', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: INK, marginBottom: 14 }}>
+                    <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                  </div>
+                  <div style={{ ...serif, fontSize: 20, color: INK, marginBottom: 9 }}>Ihr Plan folgt in Kürze</div>
+                  <div style={{ fontSize: 14.5, lineHeight: 1.6, color: '#4A6071', maxWidth: 300, margin: '0 auto' }}>
+                    Ihren persönlichen Ernährungs- &amp; Trainingsplan bespricht Ajanth mit Ihnen im ersten Gespräch und stellt ihn danach hier für Sie ein.
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
 
