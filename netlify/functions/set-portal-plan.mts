@@ -7,8 +7,9 @@
 // Returns: { ok, version } / 4xx / 5xx.
 
 import type { Context } from '@netlify/functions'
-import { getSupabaseCreds, sbSelect } from './_shared/supabase.ts'
+import { getSupabaseCreds } from './_shared/supabase.ts'
 import { notifyClientNewPlan } from './_shared/notify-client.ts'
+import { publishPlan } from './_shared/portal-plans.ts'
 
 const ALLOWED_TYPES = new Set(['heading', 'text', 'list', 'meal', 'training', 'note'])
 
@@ -79,43 +80,12 @@ export default async (req: Request, _context: Context) => {
   const intro = typeof body?.intro === 'string' && body.intro.trim() ? body.intro.trim().slice(0, 1000) : null
   const subjectId = typeof body?.subjectId === 'string' && body.subjectId.trim() ? body.subjectId.trim().slice(0, 80) : null
 
-  // Bestehende Version lesen (für version++)
-  let nextVersion = 1
+  // Veröffentlichen: upsert portal_plans (aktuell) + Archiv in portal_plan_versions (Historie).
+  let nextVersion: number
   try {
-    const existing = await sbSelect(creds, 'portal_plans', `client_sub=eq.${encodeURIComponent(email)}&select=version&limit=1`)
-    if (existing[0]?.version) nextVersion = Number(existing[0].version) + 1
+    nextVersion = await publishPlan(creds, { email, title, intro, sections, subjectId })
   } catch (err) {
-    console.error('[set-portal-plan] version lookup failed', err)
-    return jsonResponse(500, { error: 'Plan konnte nicht gelesen werden.' })
-  }
-
-  // Upsert auf client_sub (merge-duplicates); updated_at explizit (Default greift nur bei INSERT)
-  const row = {
-    client_sub: email,
-    subject_id: subjectId,
-    title,
-    intro,
-    sections,
-    version: nextVersion,
-    updated_at: new Date().toISOString(),
-  }
-  try {
-    const res = await fetch(`${creds.url}/rest/v1/portal_plans?on_conflict=client_sub`, {
-      method: 'POST',
-      headers: {
-        apikey: creds.serviceKey,
-        Authorization: `Bearer ${creds.serviceKey}`,
-        'Content-Type': 'application/json',
-        Prefer: 'resolution=merge-duplicates,return=minimal',
-      },
-      body: JSON.stringify(row),
-    })
-    if (!res.ok) {
-      console.error('[set-portal-plan] upsert failed', res.status, await res.text())
-      return jsonResponse(500, { error: 'Plan konnte nicht gespeichert werden.' })
-    }
-  } catch (err) {
-    console.error('[set-portal-plan] upsert error', err)
+    console.error('[set-portal-plan] publish failed', err)
     return jsonResponse(500, { error: 'Plan konnte nicht gespeichert werden.' })
   }
 

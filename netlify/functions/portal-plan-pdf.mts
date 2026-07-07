@@ -88,13 +88,16 @@ export default async (req: Request, _context: Context) => {
   const creds = getSupabaseCreds()
   if (!creds) return jsonResponse(503, { error: 'Portal-Speicher ist noch nicht konfiguriert.' })
 
+  // Optional ?version=N → historische Version aus dem Archiv rendern (sonst der aktuelle Plan).
+  const versionParam = url.searchParams.get('version')
+  const version = versionParam && /^\d+$/.test(versionParam) ? Number(versionParam) : null
+
   let row: any
   try {
-    const rows = await sbSelect(
-      creds,
-      'portal_plans',
-      `client_sub=eq.${encodeURIComponent(clientSub)}&limit=1&select=title,intro,sections,version,updated_at`,
-    )
+    const enc = encodeURIComponent(clientSub)
+    const rows = version
+      ? await sbSelect(creds, 'portal_plan_versions', `client_sub=eq.${enc}&version=eq.${version}&limit=1&select=title,intro,sections,version,published_at`)
+      : await sbSelect(creds, 'portal_plans', `client_sub=eq.${enc}&limit=1&select=title,intro,sections,version,updated_at`)
     row = rows[0]
   } catch (err) {
     console.error('[portal-plan-pdf] supabase select failed', err)
@@ -111,7 +114,7 @@ export default async (req: Request, _context: Context) => {
         intro: row.intro ?? null,
         sections: Array.isArray(row.sections) ? row.sections : [],
         version: row.version ?? null,
-        updatedAt: row.updated_at ?? null,
+        updatedAt: row.updated_at ?? row.published_at ?? null,
       },
       { name, assets: ASSETS },
     )
