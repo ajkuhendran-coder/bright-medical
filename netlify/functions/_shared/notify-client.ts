@@ -32,3 +32,29 @@ export async function notifyClientNewMessage(opts: { clientEmail: string; coachN
     console.error('[notify-client] failed', err)
   }
 }
+
+// Best-effort-Benachrichtigung an die KLIENTIN, wenn ein neuer/aktualisierter Plan für sie
+// veröffentlicht wird. Wie oben: NUR ein Hinweis — KEIN Plan-Inhalt, keine Gesundheitsdaten
+// (der Plan bleibt im verschlüsselten Portal). Schluckt ALLE Fehler: der Publish-Pfad
+// (cc-upsert-plan / set-portal-plan) darf hieran nie scheitern.
+export async function notifyClientNewPlan(opts: { clientEmail: string }): Promise<void> {
+  try {
+    const apiKey = process.env.RESEND_API_KEY
+    if (!apiKey) return
+    const resend = new Resend(apiKey)
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      replyTo: REPLY_TO,
+      to: opts.clientEmail,
+      subject: 'Ihr persönlicher Plan liegt in „Mein Programm" für Sie bereit',
+      text:
+        `Guten Tag,\n\n` +
+        `in Ihrem persönlichen Bereich „Mein Programm" liegt jetzt Ihr Ernährungs- & Trainingsplan für Sie bereit.\n\n` +
+        `Öffnen Sie einfach Ihren Bereich — über den Link aus Ihrer Einladungs-Mail oder das „Mein Programm"-Symbol auf Ihrem Startbildschirm —, um Ihren Plan anzusehen. Dort können Sie ihn jederzeit auch als PDF speichern.\n\n` +
+        `Herzliche Grüße\nBright Medical\n\n` +
+        `(Automatische Benachrichtigung. Ihre Daten bleiben verschlüsselt in Ihrem Bereich — bitte antworten Sie nicht auf diese E-Mail.)`,
+    })
+  } catch (err) {
+    console.error('[notify-client] plan notification failed', err)
+  }
+}

@@ -45,7 +45,7 @@ type Entry =
   | { kind: 'entry'; time: string; title: string; tag: string; detail: string; photo?: string }
 
 // Plan-Bausteine (festes Vokabular, kommen als JSONB aus portal_plans — bewusst lose typisiert).
-type PlanSectionData = { type: string; title?: string; body?: string; items?: string[] }
+type PlanSectionData = { type: string; title?: string; body?: string; items?: string[]; variant?: string; plate?: boolean }
 type PlanData = { title: string; intro: string | null; sections: PlanSectionData[]; version: number; updatedAt: string }
 
 const TAG_COLORS: Record<string, [string, string]> = {
@@ -178,49 +178,143 @@ function formatPlanDate(iso: string): string {
   return d.toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Berlin' })
 }
 
-// Ein Plan-Baustein rendern (heading/text/list/meal/training/note; unbekannt → als Text).
-function PlanSection({ s }: { s: PlanSectionData }) {
-  const items = Array.isArray(s.items) ? s.items.filter((x) => typeof x === 'string' && x.trim()) : []
-  if (s.type === 'heading') {
-    return <div style={{ ...serif, fontSize: 18, color: INK, margin: '20px 0 2px' }}>{s.title}</div>
-  }
-  if (s.type === 'note') {
-    return <div style={{ margin: '12px 0 0', padding: '12px 14px', background: '#F2F8FA', border: '1px solid #DCEEF3', borderRadius: 12, fontSize: 13, lineHeight: 1.55, color: '#4A6071' }}>{s.body}</div>
-  }
-  if (s.type === 'meal' || s.type === 'training') {
-    const isMeal = s.type === 'meal'
-    return (
-      <div className="mp-card" style={{ margin: '12px 0 0', padding: '16px 18px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: s.body || items.length ? 10 : 0 }}>
-          <span style={{ flex: 'none', width: 30, height: 30, borderRadius: 9, background: isMeal ? '#E7F6FA' : '#E8F5EE', display: 'flex', alignItems: 'center', justifyContent: 'center', color: isMeal ? ACC_DK : OK }}>
-            {isMeal ? (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M3 2v7c0 1.1.9 2 2 2a2 2 0 0 0 2-2V2" /><path d="M7 2v20" /><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" /></svg>
-            ) : (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m6.5 6.5 11 11" /><path d="m21 21-1-1" /><path d="m3 3 1 1" /><path d="m18 22 4-4" /><path d="m2 6 4-4" /><path d="m3 10 7-7" /><path d="m14 21 7-7" /></svg>
-            )}
-          </span>
-          <span style={{ fontSize: 15, fontWeight: 600, color: INK }}>{s.title}</span>
+// Inline-Fettung (**fett**) → React-Knoten (spiegelt das PDF).
+function RichText({ text, boldColor = INK }: { text?: string; boldColor?: string }) {
+  const parts = String(text ?? '').split('**')
+  return <>{parts.map((p, i) => (i % 2 === 1 ? <strong key={i} style={{ fontWeight: 600, color: boldColor }}>{p}</strong> : <span key={i}>{p}</span>))}</>
+}
+
+const serifI = { fontFamily: "'Newsreader', Georgia, serif", fontStyle: 'italic', fontWeight: 400 } as const
+const PLAN_SIG = { name: 'Ajanth Kuhendran', lines: ['Facharzt für Allgemeinmedizin', 'Spezialist in funktionelle und integrative Medizin', 'Bright Medical'] }
+
+function Kicker({ label }: { label: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '22px 0 8px' }}>
+      <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: ACC }}>{label}</span>
+      <span style={{ flex: 1, height: 1, background: '#EDF1F5' }} />
+    </div>
+  )
+}
+function PlanBullets({ items }: { items: string[] }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, margin: '4px 0 0' }}>
+      {items.map((it, i) => (
+        <div key={i} style={{ display: 'flex', gap: 11, alignItems: 'flex-start' }}>
+          <span style={{ flex: 'none', width: 6, height: 6, borderRadius: '50%', background: ACC, marginTop: 7 }} />
+          <span style={{ fontSize: 14.5, lineHeight: 1.55, color: '#40566A' }}><RichText text={it} /></span>
         </div>
-        {s.body && <div style={{ fontSize: 14, lineHeight: 1.55, color: '#4A6071', marginBottom: items.length ? 8 : 0 }}>{s.body}</div>}
-        {items.length > 0 && (
-          <ul style={{ margin: 0, paddingLeft: 18 }}>
-            {items.map((it, i) => <li key={i} style={{ fontSize: 14, lineHeight: 1.6, color: INK, marginBottom: 2 }}>{it}</li>)}
-          </ul>
-        )}
-      </div>
-    )
-  }
-  if (s.type === 'list') {
-    return (
-      <div style={{ margin: '12px 0 0' }}>
-        {s.title && <div style={{ fontSize: 14, fontWeight: 600, color: INK, marginBottom: 6 }}>{s.title}</div>}
-        <ul style={{ margin: 0, paddingLeft: 18 }}>
-          {items.map((it, i) => <li key={i} style={{ fontSize: 14, lineHeight: 1.6, color: '#4A6071', marginBottom: 2 }}>{it}</li>)}
-        </ul>
-      </div>
-    )
-  }
-  return <div style={{ fontSize: 14.5, lineHeight: 1.6, color: '#4A6071', margin: '10px 0 0' }}>{s.body}</div>
+      ))}
+    </div>
+  )
+}
+
+// Plan im Design rendern — kontext-bewusst: die Überschrift steuert Karten/Häkchen (wie im PDF).
+function PlanBody({ sections }: { sections: PlanSectionData[] }) {
+  const guardRe = /leitplanke|grundregel|grundsatz|prinzip|regel/i
+  const successRe = /erfolg|messen|merken|dranbleib|erkenne/i
+  let headingKind: 'guard' | 'success' | 'other' = 'other'
+  let firstList = false
+  const out: ReactNode[] = []
+  sections.forEach((s, i) => {
+    const items = Array.isArray(s.items) ? s.items.filter((x) => typeof x === 'string' && x.trim()) : []
+    if (s.type === 'heading') {
+      headingKind = guardRe.test(s.title || '') ? 'guard' : successRe.test(s.title || '') ? 'success' : 'other'
+      out.push(
+        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '26px 0 2px' }}>
+          <div style={{ ...serif, fontSize: 21, color: INK, whiteSpace: 'nowrap' }}>{s.title}</div>
+          <div style={{ flex: 1, height: 1, background: LINE }} />
+        </div>,
+      )
+    } else if (s.type === 'list') {
+      const variant = s.variant || (headingKind === 'guard' || (!firstList && items.length >= 2 && items.length <= 3) ? 'cards' : headingKind === 'success' ? 'checks' : 'plain')
+      firstList = true
+      if (variant === 'cards' && items.length >= 2 && items.length <= 3) {
+        out.push(
+          <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 10, margin: '14px 0 0' }}>
+            {items.map((it, j) => (
+              <div key={j} style={{ display: 'flex', gap: 14, alignItems: 'flex-start', background: '#F7F9FB', border: `1px solid ${LINE}`, borderRadius: 14, padding: '14px 16px' }}>
+                <div style={{ ...serif, fontSize: 30, lineHeight: 1, color: ACC, flex: 'none', width: 36 }}>{String(j + 1).padStart(2, '0')}</div>
+                <div style={{ fontSize: 14, lineHeight: 1.55, color: '#40566A', paddingTop: 4 }}><RichText text={it} /></div>
+              </div>
+            ))}
+          </div>,
+        )
+      } else if (variant === 'checks') {
+        out.push(
+          <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 11, margin: '12px 0 0' }}>
+            {items.map((it, j) => (
+              <div key={j} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                <span style={{ flex: 'none', width: 24, height: 24, borderRadius: '50%', background: '#EAF6F9', border: '1px solid #CDE9F0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: ACC_DK, marginTop: 1 }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                </span>
+                <span style={{ fontSize: 14.5, lineHeight: 1.55, color: '#40566A' }}><RichText text={it} /></span>
+              </div>
+            ))}
+          </div>,
+        )
+      } else {
+        out.push(
+          <div key={i} style={{ margin: '12px 0 0' }}>
+            {s.title && <div style={{ fontSize: 14, fontWeight: 600, color: INK, marginBottom: 6 }}>{s.title}</div>}
+            <PlanBullets items={items} />
+          </div>,
+        )
+      }
+    } else if (s.type === 'meal') {
+      out.push(
+        <div key={i}>
+          <Kicker label="Mahlzeit" />
+          <div style={{ ...serif, fontSize: 22, color: INK, margin: '0 0 2px' }}>{s.title}</div>
+          {s.plate ? (
+            <img src="/images/teller-portionsmodell.jpg" alt="Der Teller · Portionsmodell — die Hälfte Gemüse, ein Viertel Eiweiß, ein Viertel Beilage" style={{ width: '100%', borderRadius: 14, border: `1px solid ${LINE}`, display: 'block', margin: '10px 0 0' }} />
+          ) : (
+            <>
+              {s.body && <div style={{ ...serifI, fontSize: 15, color: MUT, margin: '2px 0 10px' }}>{s.body}</div>}
+              <PlanBullets items={items} />
+            </>
+          )}
+        </div>,
+      )
+    } else if (s.type === 'training') {
+      let title = s.title || 'Bewegung'
+      let badge = ''
+      const m = title.match(/^(.*?)\s*\(([^)]+)\)\s*$/)
+      if (m) { title = m[1].trim(); badge = m[2].trim() }
+      out.push(
+        <div key={i}>
+          <Kicker label="Bewegung" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', margin: '0 0 2px' }}>
+            <span style={{ ...serif, fontSize: 22, color: INK }}>{title}</span>
+            {badge && <span style={{ fontSize: 11, fontWeight: 600, color: ACC_DK, background: '#EAF6F9', border: '1px solid #CDE9F0', padding: '3px 10px', borderRadius: 20 }}>{badge}</span>}
+          </div>
+          {s.body && <div style={{ ...serifI, fontSize: 15, color: MUT, margin: '4px 0 10px' }}>{s.body}</div>}
+          <PlanBullets items={items} />
+        </div>,
+      )
+    } else if (s.type === 'note') {
+      if (s.title && s.title.trim()) {
+        out.push(
+          <div key={i} style={{ margin: '16px 0 0', background: '#EAF6F9', border: '1px solid #CDE9F0', borderRadius: 14, padding: '14px 16px' }}>
+            <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: ACC_DK, marginBottom: 5 }}>{s.title}</div>
+            <div style={{ fontSize: 14.5, lineHeight: 1.55, color: '#2C5266' }}><RichText text={s.body} boldColor="#14314D" /></div>
+          </div>,
+        )
+      } else {
+        out.push(
+          <div key={i} style={{ margin: '24px 0 0', borderLeft: `3px solid ${ACC}`, padding: '2px 0 2px 18px' }}>
+            <div style={{ ...serifI, fontSize: 16, lineHeight: 1.6, color: '#2C4256' }}>{s.body}</div>
+            <div style={{ marginTop: 14 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: INK }}>{PLAN_SIG.name}</div>
+              {PLAN_SIG.lines.map((ln, j) => <div key={j} style={{ fontSize: 12.5, color: MUT, lineHeight: 1.5 }}>{ln}</div>)}
+            </div>
+          </div>,
+        )
+      }
+    } else if (s.body) {
+      out.push(<div key={i} style={{ fontSize: 14.5, lineHeight: 1.6, color: '#40566A', margin: '12px 0 0' }}><RichText text={s.body} /></div>)
+    }
+  })
+  return <>{out}</>
 }
 
 // PWA-Tags fürs Portal zur Laufzeit einhängen — NUR auf dieser Route; die
@@ -807,45 +901,45 @@ export default function MeinProgramm() {
 
           {/* ---------- PLAN ---------- */}
           {tab === 'plan' && (
-            <div style={{ padding: '0 0 18px', animation: 'mp-rise .35s ease' }}>
-              <div style={{ padding: '14px 26px 8px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
-                <div>
-                  <div style={{ ...serif, fontSize: 26, color: INK }}>Ihr Plan</div>
-                  <div style={{ fontSize: 13, color: MUT, marginTop: 2 }}>Ernährung &amp; Training</div>
-                </div>
-                {plan && (
-                  <a
-                    href={`/.netlify/functions/portal-plan-pdf?t=${encodeURIComponent(token || '')}`}
-                    target="_blank"
-                    rel="noopener"
-                    style={{ flex: 'none', display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 14px', borderRadius: 12, border: `1px solid ${LINE}`, background: '#fff', color: INK, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}
-                  >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={ACC_DK} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
-                    </svg>
-                    PDF
-                  </a>
-                )}
-              </div>
-
+            <div style={{ padding: '0 0 22px', animation: 'mp-rise .35s ease' }}>
               {plan ? (
-                <div style={{ padding: '4px 26px 0', animation: 'mp-rise .3s ease' }}>
-                  {plan.title && <div style={{ ...serif, fontSize: 20, color: INK, margin: '6px 0 2px' }}>{plan.title}</div>}
-                  {plan.intro && <div style={{ fontSize: 14.5, lineHeight: 1.6, color: '#4A6071', margin: '4px 0 2px' }}>{plan.intro}</div>}
-                  {plan.sections.map((s, i) => <PlanSection key={i} s={s} />)}
-                  {plan.updatedAt && <div style={{ margin: '20px 0 0', textAlign: 'center', fontSize: 12, color: '#A9B7C1' }}>🔒 Aktualisiert am {formatPlanDate(plan.updatedAt)} · verschlüsselt in der EU</div>}
+                <div style={{ padding: '12px 26px 0', animation: 'mp-rise .3s ease' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                    <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '.18em', textTransform: 'uppercase', color: ACC, paddingTop: 5 }}>Für {payload.name}</div>
+                    <a
+                      href={`/.netlify/functions/portal-plan-pdf?t=${encodeURIComponent(token || '')}`}
+                      target="_blank"
+                      rel="noopener"
+                      style={{ flex: 'none', display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 14px', borderRadius: 12, border: `1px solid ${LINE}`, background: '#fff', color: INK, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}
+                    >
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={ACC_DK} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                      PDF
+                    </a>
+                  </div>
+                  {plan.title && <div style={{ ...serif, fontSize: 27, lineHeight: 1.12, color: INK, margin: '6px 0 0' }}>{plan.title}</div>}
+                  {plan.intro && <div style={{ fontSize: 15, lineHeight: 1.65, color: '#4A6071', margin: '10px 0 0' }}><RichText text={plan.intro} /></div>}
+                  <PlanBody sections={plan.sections} />
+                  {plan.updatedAt && <div style={{ margin: '26px 0 0', textAlign: 'center', fontSize: 12, color: '#A9B7C1' }}>🔒 Aktualisiert am {formatPlanDate(plan.updatedAt)} · verschlüsselt in der EU</div>}
                 </div>
               ) : (
-                /* Platzhalter — bis Ajanth den individuellen Plan einstellt (keine Demo-Empfehlungen) */
-                <div className="mp-card" style={{ margin: '14px 26px 0', padding: '30px 22px', textAlign: 'center' }}>
-                  <div style={{ width: 48, height: 48, borderRadius: 13, background: '#EAF0F4', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: INK, marginBottom: 14 }}>
-                    <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                <>
+                  <div style={{ padding: '14px 26px 8px' }}>
+                    <div style={{ ...serif, fontSize: 26, color: INK }}>Ihr Plan</div>
+                    <div style={{ fontSize: 13, color: MUT, marginTop: 2 }}>Ernährung &amp; Training</div>
                   </div>
-                  <div style={{ ...serif, fontSize: 20, color: INK, marginBottom: 9 }}>Ihr Plan folgt in Kürze</div>
-                  <div style={{ fontSize: 14.5, lineHeight: 1.6, color: '#4A6071', maxWidth: 300, margin: '0 auto' }}>
-                    Ihren persönlichen Ernährungs- &amp; Trainingsplan bespricht Ajanth mit Ihnen im ersten Gespräch und stellt ihn danach hier für Sie ein.
+                  {/* Platzhalter — bis Ajanth den individuellen Plan einstellt (keine Demo-Empfehlungen) */}
+                  <div className="mp-card" style={{ margin: '14px 26px 0', padding: '30px 22px', textAlign: 'center' }}>
+                    <div style={{ width: 48, height: 48, borderRadius: 13, background: '#EAF0F4', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: INK, marginBottom: 14 }}>
+                      <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                    </div>
+                    <div style={{ ...serif, fontSize: 20, color: INK, marginBottom: 9 }}>Ihr Plan folgt in Kürze</div>
+                    <div style={{ fontSize: 14.5, lineHeight: 1.6, color: '#4A6071', maxWidth: 300, margin: '0 auto' }}>
+                      Ihren persönlichen Ernährungs- &amp; Trainingsplan bespricht Ajanth mit Ihnen im ersten Gespräch und stellt ihn danach hier für Sie ein.
+                    </div>
                   </div>
-                </div>
+                </>
               )}
             </div>
           )}

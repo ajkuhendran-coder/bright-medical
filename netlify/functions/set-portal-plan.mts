@@ -8,6 +8,7 @@
 
 import type { Context } from '@netlify/functions'
 import { getSupabaseCreds, sbSelect } from './_shared/supabase.ts'
+import { notifyClientNewPlan } from './_shared/notify-client.ts'
 
 const ALLOWED_TYPES = new Set(['heading', 'text', 'list', 'meal', 'training', 'note'])
 
@@ -27,7 +28,7 @@ function safeEqual(a: string, b: string): boolean {
   return diff === 0
 }
 
-type Section = { type: string; title?: string; body?: string; items?: string[] }
+type Section = { type: string; title?: string; body?: string; items?: string[]; variant?: string; plate?: boolean }
 function sanitizeSections(input: unknown): Section[] | null {
   if (!Array.isArray(input) || input.length === 0 || input.length > 60) return null
   const out: Section[] = []
@@ -36,13 +37,16 @@ function sanitizeSections(input: unknown): Section[] | null {
     const type = (raw as any).type
     if (typeof type !== 'string' || !ALLOWED_TYPES.has(type)) return null
     const sec: Section = { type }
-    const { title, body, items } = raw as any
+    const { title, body, items, variant, plate } = raw as any
     if (title != null) { if (typeof title !== 'string') return null; sec.title = title.slice(0, 200) }
     if (body != null) { if (typeof body !== 'string') return null; sec.body = body.slice(0, 2000) }
     if (items != null) {
       if (!Array.isArray(items)) return null
       sec.items = items.filter((x) => typeof x === 'string').slice(0, 40).map((x: string) => x.slice(0, 300))
     }
+    // optionale Design-Hinweise (abwärtskompatibel): Karten/Häkchen-Variante + Teller-Foto
+    if (typeof variant === 'string' && ['cards', 'checks', 'plain'].includes(variant)) sec.variant = variant
+    if (plate === true) sec.plate = true
     out.push(sec)
   }
   return out
@@ -116,5 +120,7 @@ export default async (req: Request, _context: Context) => {
   }
 
   console.log(`✓ Portal-Plan gesetzt für ${email} (v${nextVersion}, ${sections.length} Bausteine)`)
+  // Best-effort: Klientin über den neuen Plan informieren (E-Mail, OHNE Inhalt). Schluckt eigene Fehler.
+  await notifyClientNewPlan({ clientEmail: email })
   return jsonResponse(200, { ok: true, version: nextVersion })
 }

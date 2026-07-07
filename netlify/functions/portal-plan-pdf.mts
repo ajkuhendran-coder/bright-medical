@@ -9,11 +9,9 @@
 // Returns: application/pdf (Content-Disposition attachment) · 4xx/5xx als JSON.
 
 import type { Context } from '@netlify/functions'
-import { readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
 import { verifyPortalToken } from './_shared/jwt.js'
 import { getSupabaseCreds, sbSelect } from './_shared/supabase.ts'
-import { buildPlanPdf } from './_shared/plan-pdf.ts'
+import { buildPlanPdf, loadPlanPdfAssets } from './_shared/plan-pdf.ts'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -33,11 +31,11 @@ function safeEqual(a: string, b: string): boolean {
   return diff === 0
 }
 
-// BM-Wortmarke (dunkle Tinte auf transparent) einmalig beim Init laden — muss über
+// Marken-Fonts + Bilder (Logo, Teller-Foto) einmalig beim Init laden — müssen über
 // netlify.toml `included_files` mitgebündelt sein.
-const LOGO_PNG: Uint8Array | null = (() => {
-  try { return readFileSync(fileURLToPath(new URL('../../public/images/logo-light.png', import.meta.url))) }
-  catch { return null }
+const ASSETS = (() => {
+  try { return loadPlanPdfAssets() }
+  catch (e) { console.error('[portal-plan-pdf] assets load failed', e); return null }
 })()
 
 export default async (req: Request, _context: Context) => {
@@ -89,6 +87,7 @@ export default async (req: Request, _context: Context) => {
     return jsonResponse(500, { error: 'Plan konnte nicht geladen werden.' })
   }
   if (!row) return jsonResponse(404, { error: 'Für Sie ist noch kein Plan hinterlegt.' })
+  if (!ASSETS) return jsonResponse(500, { error: 'PDF-Assets nicht im Bundle' })
 
   let pdf: Uint8Array
   try {
@@ -100,7 +99,7 @@ export default async (req: Request, _context: Context) => {
         version: row.version ?? null,
         updatedAt: row.updated_at ?? null,
       },
-      { name, logoPng: LOGO_PNG },
+      { name, assets: ASSETS },
     )
   } catch (err) {
     console.error('[portal-plan-pdf] PDF build failed', err)
