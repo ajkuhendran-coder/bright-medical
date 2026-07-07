@@ -152,6 +152,19 @@ function compressImage(file: File, maxDim = 1280, quality = 0.82): Promise<strin
   })
 }
 
+// --- Push-Benachrichtigung (freiwillig) ---
+// VAPID-Public-Key ist NICHT geheim (Gegenstück zum privaten Key in der Netlify-ENV).
+const VAPID_PUBLIC = 'BPmBO9l9zVZC1_SM46JrZihxbvb4CYFMeGog7UluDc-TCPqLo3raEqnZ0QXXQY0IILjjSLpQzxUqiE_DU3PUbxs'
+const pushSupported = typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
+function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
+  const padding = '='.repeat((4 - (base64.length % 4)) % 4)
+  const b64 = (base64 + padding).replace(/-/g, '+').replace(/_/g, '/')
+  const raw = atob(b64)
+  const arr = new Uint8Array(new ArrayBuffer(raw.length))
+  for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i)
+  return arr
+}
+
 // --- kleine Bausteine ---
 function CamIcon({ s = 17 }: { s?: number }) {
   return (
@@ -393,6 +406,10 @@ export default function MeinProgramm() {
   const [noteText, setNoteText] = useState('')
   const [noteTag, setNoteTag] = useState('Notiz')
   const [writeError, setWriteError] = useState('')
+  const [pushState, setPushState] = useState<'idle' | 'granted' | 'denied' | 'busy' | 'unsupported'>(() => {
+    if (!pushSupported) return 'unsupported'
+    return Notification.permission === 'granted' ? 'granted' : Notification.permission === 'denied' ? 'denied' : 'idle'
+  })
   // „Zum Startbildschirm"-Tipp: einmalig, wegklickbar (localStorage); nicht in der
   // bereits installierten App (display-mode standalone / iOS navigator.standalone).
   const [a2hsOff, setA2hsOff] = useState(() => {
@@ -480,6 +497,45 @@ export default function MeinProgramm() {
   useEffect(() => { void loadThread() }, [loadThread])
   useEffect(() => { void loadDiary() }, [loadDiary])
   useEffect(() => { void loadPlan() }, [loadPlan])
+
+  // --- Push-Benachrichtigung (freiwillig, nur nach Consent) ---
+  const savePush = useCallback(async (sub: PushSubscription) => {
+    if (!token) return
+    const j = sub.toJSON()
+    try {
+      await fetch('/.netlify/functions/save-push-subscription', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, subscription: { endpoint: sub.endpoint, keys: j.keys }, url: window.location.href }),
+      })
+    } catch { /* egal — E-Mail bleibt der garantierte Kanal */ }
+  }, [token])
+
+  const enablePush = useCallback(async () => {
+    if (!pushSupported || !token) return
+    setPushState('busy')
+    try {
+      const perm = await Notification.requestPermission()
+      if (perm !== 'granted') { setPushState(perm === 'denied' ? 'denied' : 'idle'); return }
+      const reg = await navigator.serviceWorker.register('/sw.js')
+      await navigator.serviceWorker.ready
+      const existing = await reg.pushManager.getSubscription()
+      const sub = existing ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC) }))
+      await savePush(sub)
+      setPushState('granted')
+    } catch { setPushState('idle') }
+  }, [token, savePush])
+
+  // Wenn Push bereits erlaubt ist: SW registrieren + Subscription sicherstellen (neues Gerät / erneuert).
+  useEffect(() => {
+    if (!pushSupported || !token || consentState !== 'granted' || Notification.permission !== 'granted') return
+    navigator.serviceWorker.register('/sw.js').then(async (reg) => {
+      try {
+        const existing = await reg.pushManager.getSubscription()
+        const sub = existing ?? (await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC) }))
+        await savePush(sub)
+      } catch { /* egal */ }
+    }).catch(() => {})
+  }, [token, consentState, savePush])
 
   // Einwilligungs-Status prüfen — Gate nur zeigen, wenn noch keine Einwilligung vorliegt.
   useEffect(() => {
@@ -954,6 +1010,23 @@ export default function MeinProgramm() {
                   <div style={{ fontSize: 12.5, color: OK, display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 7, height: 7, borderRadius: '50%', background: OK, display: 'inline-block' }} />Ihr Health Coach · antwortet meist in 1 Tag</div>
                 </div>
               </div>
+
+              {pushState !== 'unsupported' && pushState !== 'denied' && (
+                <div style={{ padding: '14px 26px 0' }}>
+                  {pushState === 'granted' ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: OK }}>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
+                      Benachrichtigungen sind aktiv.
+                    </div>
+                  ) : (
+                    <button onClick={enablePush} disabled={pushState === 'busy'} style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, padding: '12px 14px', borderRadius: 12, border: `1px solid ${LINE}`, background: '#fff', color: INK, fontSize: 13.5, fontWeight: 600, cursor: pushState === 'busy' ? 'default' : 'pointer', fontFamily: 'inherit' }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={ACC_DK} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
+                      {pushState === 'busy' ? 'Wird aktiviert …' : 'Benachrichtigungen aktivieren'}
+                    </button>
+                  )}
+                  {pushState !== 'granted' && <div style={{ fontSize: 11.5, color: MUT, marginTop: 7, textAlign: 'center', lineHeight: 1.45 }}>Optional — Sie werden aufs Handy erinnert, wenn Ajanth Ihnen schreibt (ohne Inhalt).</div>}
+                </div>
+              )}
 
               <div style={{ padding: '20px 26px 8px', display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {thread.length === 0 && (

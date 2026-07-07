@@ -11,6 +11,7 @@
 import type { Context } from '@netlify/functions'
 import { getSupabaseCreds, sbInsert } from './_shared/supabase.ts'
 import { notifyClientNewMessage } from './_shared/notify-client.ts'
+import { sendPushToClient } from './_shared/push.ts'
 
 const MAX_TEXT = 4000
 
@@ -65,9 +66,10 @@ export default async (req: Request, _context: Context) => {
       text,
     })
     const row = Array.isArray(rows) ? rows[0] : rows
-    // Best-effort: Klientin über die neue Coach-Nachricht informieren (E-Mail; Push folgt separat).
-    // notifyClientNewMessage schluckt eigene Fehler -> der Coach-Write scheitert hieran nie.
+    // Best-effort: Klientin über die neue Coach-Nachricht informieren — E-Mail (garantiert)
+    // + Push (falls Gerät angemeldet). Beide schlucken eigene Fehler -> Coach-Write scheitert nie.
     await notifyClientNewMessage({ clientEmail: email })
+    await sendPushToClient(email, { title: 'Neue Nachricht', body: 'Neue Nachricht in Ihrem Bereich „Mein Programm".', tag: 'coach-message' })
     return jsonResponse(200, { ok: true, id: row?.id, created_at: row?.created_at })
   } catch (err) {
     console.error('[cc-coach-reply] supabase insert failed', err)
