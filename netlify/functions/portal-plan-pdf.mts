@@ -9,9 +9,11 @@
 // Returns: application/pdf (Content-Disposition attachment) · 4xx/5xx als JSON.
 
 import type { Context } from '@netlify/functions'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { verifyPortalToken } from './_shared/jwt.js'
 import { getSupabaseCreds, sbSelect } from './_shared/supabase.ts'
-import { buildPlanPdf, loadPlanPdfAssets } from './_shared/plan-pdf.ts'
+import { buildPlanPdf, type PlanPdfAssets } from './_shared/plan-pdf.ts'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -31,11 +33,23 @@ function safeEqual(a: string, b: string): boolean {
   return diff === 0
 }
 
-// Marken-Fonts + Bilder (Logo, Teller-Foto) einmalig beim Init laden — müssen über
-// netlify.toml `included_files` mitgebündelt sein.
-const ASSETS = (() => {
-  try { return loadPlanPdfAssets() }
-  catch (e) { console.error('[portal-plan-pdf] assets load failed', e); return null }
+// Marken-Fonts + Bilder DIREKT in der Function laden (bewährtes Muster wie submit-vereinbarung:
+// aus email-templates/_assets/, via netlify.toml `included_files` gebündelt). NICHT im geteilten
+// Modul laden — dort zeigt import.meta.url nach dem Bundling auf die Function, nicht aufs Modul.
+const ASSETS: PlanPdfAssets | null = (() => {
+  try {
+    const load = (rel: string) => readFileSync(fileURLToPath(new URL(`../../email-templates/_assets/${rel}`, import.meta.url)))
+    const opt = (rel: string): Uint8Array | null => { try { return load(rel) } catch { return null } }
+    return {
+      serifMed: load('fonts/Newsreader-Medium.ttf'),
+      serifItalic: load('fonts/Newsreader-Italic.ttf'),
+      sans: load('fonts/HankenGrotesk-Regular.ttf'),
+      sansSemi: load('fonts/HankenGrotesk-SemiBold.ttf'),
+      sansBold: load('fonts/HankenGrotesk-Bold.ttf'),
+      logo: opt('logo-light.png'),
+      plate: opt('teller-portionsmodell.jpg'),
+    }
+  } catch (e) { console.error('[portal-plan-pdf] assets load failed', e); return null }
 })()
 
 export default async (req: Request, _context: Context) => {

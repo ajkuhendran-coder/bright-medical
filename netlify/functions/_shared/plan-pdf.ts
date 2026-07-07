@@ -11,8 +11,6 @@
 //   **fett** im Text/Items → Hervorhebung
 //   note MIT title → Getränke-Callout · note OHNE title → Schluss-Zitat + Signatur
 
-import { readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
 import { PDFDocument, rgb, type PDFFont, type PDFImage, type PDFPage, type RGB } from 'pdf-lib'
 import fontkit from '@pdf-lib/fontkit'
 
@@ -30,24 +28,6 @@ export type PlanPdfAssets = {
   logo?: Uint8Array | null; plate?: Uint8Array | null
 }
 export type BuildPlanPdfOpts = { name?: string | null; dateLabel?: string | null; assets: PlanPdfAssets }
-
-// Fonts (Pflicht) + Bilder (optional) relativ zum Modul laden — im Function-Bundle via
-// netlify.toml included_files vorhanden. Zentralisiert, damit buildPlanPdf rein/testbar bleibt.
-export function loadPlanPdfAssets(): PlanPdfAssets {
-  const font = (f: string) => readFileSync(fileURLToPath(new URL(`./fonts/${f}`, import.meta.url)))
-  const img = (p: string): Uint8Array | null => {
-    try { return readFileSync(fileURLToPath(new URL(`../../../public/images/${p}`, import.meta.url))) } catch { return null }
-  }
-  return {
-    serifMed: font('Newsreader-Medium.ttf'),
-    serifItalic: font('Newsreader-Italic.ttf'),
-    sans: font('HankenGrotesk-Regular.ttf'),
-    sansSemi: font('HankenGrotesk-SemiBold.ttf'),
-    sansBold: font('HankenGrotesk-Bold.ttf'),
-    logo: img('logo-light.png'),
-    plate: img('teller-portionsmodell.jpg'),
-  }
-}
 
 const hex = (h: string): RGB => rgb(parseInt(h.slice(0, 2), 16) / 255, parseInt(h.slice(2, 4), 16) / 255, parseInt(h.slice(4, 6), 16) / 255)
 const C = {

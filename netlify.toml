@@ -7,9 +7,6 @@
   included_files = [
     "email-templates/**/*.html",
     "email-templates/_assets/**",
-    "public/images/logo-light.png",
-    "public/images/teller-portionsmodell.jpg",
-    "netlify/functions/_shared/fonts/*.ttf",
   ]
 
 [[headers]]
