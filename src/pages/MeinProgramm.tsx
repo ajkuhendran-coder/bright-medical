@@ -808,9 +808,24 @@ export default function MeinProgramm() {
           {/* ---------- PLAN ---------- */}
           {tab === 'plan' && (
             <div style={{ padding: '0 0 18px', animation: 'mp-rise .35s ease' }}>
-              <div style={{ padding: '14px 26px 8px' }}>
-                <div style={{ ...serif, fontSize: 26, color: INK }}>Ihr Plan</div>
-                <div style={{ fontSize: 13, color: MUT, marginTop: 2 }}>Ernährung &amp; Training</div>
+              <div style={{ padding: '14px 26px 8px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
+                <div>
+                  <div style={{ ...serif, fontSize: 26, color: INK }}>Ihr Plan</div>
+                  <div style={{ fontSize: 13, color: MUT, marginTop: 2 }}>Ernährung &amp; Training</div>
+                </div>
+                {plan && (
+                  <a
+                    href={`/.netlify/functions/portal-plan-pdf?t=${encodeURIComponent(token || '')}`}
+                    target="_blank"
+                    rel="noopener"
+                    style={{ flex: 'none', display: 'inline-flex', alignItems: 'center', gap: 7, padding: '9px 14px', borderRadius: 12, border: `1px solid ${LINE}`, background: '#fff', color: INK, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={ACC_DK} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    PDF
+                  </a>
+                )}
               </div>
 
               {plan ? (
