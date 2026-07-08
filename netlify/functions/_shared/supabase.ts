@@ -32,6 +32,12 @@ export async function sbInsert(
   return res.json()
 }
 
+// PostgREST: delete (query = PostgREST-Filter, z. B. "idempotency_key=eq.abc") — u. a. für Idempotenz-Rollback
+export async function sbDelete(creds: SupabaseCreds, table: string, query: string): Promise<void> {
+  const res = await fetch(`${creds.url}/rest/v1/${table}?${query}`, { method: 'DELETE', headers: authHeaders(creds) })
+  if (!res.ok) throw new Error(`Supabase delete ${table} ${res.status}: ${await res.text()}`)
+}
+
 // PostgREST: select (query = roher PostgREST-Querystring, z. B. "client_sub=eq.x&order=created_at.asc")
 export async function sbSelect(creds: SupabaseCreds, table: string, query: string): Promise<any[]> {
   const res = await fetch(`${creds.url}/rest/v1/${table}?${query}`, { headers: authHeaders(creds) })
