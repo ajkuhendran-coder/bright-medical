@@ -279,7 +279,7 @@ function PlanBody({ sections }: { sections: PlanSectionData[] }) {
           <Kicker label="Mahlzeit" />
           <div style={{ ...serif, fontSize: 22, color: INK, margin: '0 0 2px' }}>{s.title}</div>
           {s.plate ? (
-            <img src="/images/teller-portionsmodell.jpg" alt="Der Teller · Portionsmodell — die Hälfte Gemüse, ein Viertel Eiweiß, ein Viertel Beilage" style={{ width: '100%', borderRadius: 14, border: `1px solid ${LINE}`, display: 'block', margin: '10px 0 0' }} />
+            <img src="/images/teller-portionsmodell.jpg" alt="Der Teller · Portionsmodell — die Hälfte Gemüse, ein Viertel Eiweiß, ein Viertel Beilage" style={{ width: '100%', maxWidth: 460, borderRadius: 14, border: `1px solid ${LINE}`, display: 'block', margin: '10px auto 0' }} />
           ) : (
             <>
               {s.body && <div style={{ ...serifI, fontSize: 15, color: MUT, margin: '2px 0 10px' }}>{s.body}</div>}

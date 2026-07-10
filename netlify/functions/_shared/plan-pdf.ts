@@ -44,6 +44,7 @@ const PAGE_W = 595.28, PAGE_H = 841.89
 const MX = 50, CW = PAGE_W - MX * 2
 const CONTENT_TOP = PAGE_H - 72     // Oberkante Inhalt (unter dem laufenden Kopf)
 const MIN_Y = 78                    // Inhalts-Boden (über der Fußzeile)
+const MAX_PLATE_H = 380             // Teller-Foto max. so hoch (sonst dominiert ein quadratisches Bild die Seite); zentriert, wenn schmaler als CW
 
 const DISCLAIMER = 'Bright Medical ist ein Coaching-Angebot und ersetzt keine ärztliche Behandlung.'
 const ADDRESS = 'Bright Medical · Am Alten Güterbahnhof 24 · 76646 Bruchsal · brightmedical.de'
@@ -223,13 +224,21 @@ export async function buildPlanPdf(plan: PlanForPdf, opts: BuildPlanPdfOpts): Pr
       y -= 6
     }
   }
+  // Teller-Foto: volle Breite, aber auf MAX_PLATE_H gedeckelt (quadratische Bilder werden sonst zu groß);
+  // schmaler als CW → zentriert.
+  const plateDims = () => {
+    const ar = (plate?.width || 1) / (plate?.height || 1)
+    let w = CW, h = w / ar
+    if (h > MAX_PLATE_H) { h = MAX_PLATE_H; w = h * ar }
+    return { w, h, x: MX + (CW - w) / 2 }
+  }
   const plateFig = () => {
     if (!plate) return
     y -= 14
-    const w = CW, h = w * (plate.height / plate.width)
+    const { w, h, x } = plateDims()
     if (y - h < MIN_Y && h <= CONTENT_TOP - MIN_Y) newPage()
-    page.drawImage(plate, { x: MX, y: y - h, width: w, height: h })
-    page.drawRectangle({ x: MX, y: y - h, width: w, height: h, borderColor: C.hair, borderWidth: 1 })
+    page.drawImage(plate, { x, y: y - h, width: w, height: h })
+    page.drawRectangle({ x, y: y - h, width: w, height: h, borderColor: C.hair, borderWidth: 1 })
     y -= h + 4
   }
   const badge = (text: string, atX: number, baseY: number) => {
@@ -273,7 +282,7 @@ export async function buildPlanPdf(plan: PlanForPdf, opts: BuildPlanPdfOpts): Pr
   const mtHeight = (s: PlanSection, items: string[]) => {
     const showPlate = s.type !== 'training' && !!s.plate && !!plate
     const subH = s.body && s.body.trim() && !showPlate ? richLines(s.body, CW, 15.5, serifI, serifI) * 22 + 4 : 0
-    const bodyBlock = showPlate ? 14 + CW * ((plate?.height || 1) / (plate?.width || 1)) + 4 : itemsHeight(items, 14.5, 21, MX + CW - (MX + 20))
+    const bodyBlock = showPlate ? 14 + plateDims().h + 4 : itemsHeight(items, 14.5, 21, MX + CW - (MX + 20))
     return 22 + 18 + 30 + subH + 4 + bodyBlock
   }
 
