@@ -7,7 +7,7 @@
 // CC_API_SECRET (bewusst getrennt von BRIGHT_SEND_SECRET / Mailversand). Nur fuers Command Center.
 
 import type { Context } from '@netlify/functions'
-import { getSupabaseCreds, sbSelect } from './_shared/supabase.ts'
+import { getSupabaseCreds, sbSelect, sbSignedUrl } from './_shared/supabase.ts'
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -54,17 +54,16 @@ export default async (req: Request, _context: Context) => {
     const rows = await sbSelect(
       creds,
       'portal_messages',
-      `client_sub=eq.${encodeURIComponent(email)}&order=created_at.desc&select=id,sender,text,read_at,created_at&limit=${limit}`,
+      `client_sub=eq.${encodeURIComponent(email)}&order=created_at.desc&select=id,sender,text,read_at,created_at,audio_path,audio_seconds&limit=${limit}`,
     )
-    const messages = rows
-      .map((r) => ({
-        id: r.id,
-        sender: r.sender === 'coach' ? 'coach' : 'client',
-        text: r.text,
-        read_at: r.read_at,
-        created_at: r.created_at,
-      }))
-      .reverse()
+    // Sprachnachrichten: signierte Kurzzeit-URL, damit Dr. K seine gesendete Voice im Cockpit nachhören kann.
+    const mapped = await Promise.all(rows.map(async (r) => {
+      const base = { id: r.id, sender: r.sender === 'coach' ? 'coach' : 'client', text: r.text, read_at: r.read_at, created_at: r.created_at }
+      if (!r.audio_path) return base
+      try { return { ...base, audioUrl: await sbSignedUrl(creds, 'coach-voice', r.audio_path), audioSeconds: r.audio_seconds ?? null } }
+      catch { return base }
+    }))
+    const messages = mapped.reverse()
     return jsonResponse(200, { ok: true, count: messages.length, messages })
   } catch (err) {
     console.error('[cc-client-thread] supabase select failed', err)

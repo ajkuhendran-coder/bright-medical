@@ -7,7 +7,7 @@
 
 import type { Context } from '@netlify/functions'
 import { verifyPortalToken } from './_shared/jwt.js'
-import { getSupabaseCreds, sbSelect } from './_shared/supabase.ts'
+import { getSupabaseCreds, sbSelect, sbSignedUrl } from './_shared/supabase.ts'
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -54,12 +54,16 @@ export default async (req: Request, _context: Context) => {
     const rows = await sbSelect(
       creds,
       'portal_messages',
-      `client_sub=eq.${encodeURIComponent(payload.sub)}&order=created_at.asc&select=sender,text,created_at`,
+      `client_sub=eq.${encodeURIComponent(payload.sub)}&order=created_at.asc&select=sender,text,created_at,audio_path,audio_seconds`,
     )
-    const messages = rows.map((r) => ({
-      from: r.sender === 'coach' ? 'coach' : 'me',
-      text: r.text,
-      time: shortTime(r.created_at),
+    // Sprachnachrichten (Coach → Klientin) bekommen eine signierte Kurzzeit-URL zum Abspielen.
+    const messages = await Promise.all(rows.map(async (r) => {
+      const base = { from: r.sender === 'coach' ? 'coach' : 'me', text: r.text, time: shortTime(r.created_at) }
+      if (!r.audio_path) return base
+      try {
+        const audioUrl = await sbSignedUrl(creds, 'coach-voice', r.audio_path)
+        return { ...base, audioUrl, audioSeconds: r.audio_seconds ?? null }
+      } catch { return base }
     }))
     return jsonResponse(200, { ok: true, configured: true, messages })
   } catch (err) {

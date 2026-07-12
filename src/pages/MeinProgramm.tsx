@@ -39,7 +39,7 @@ type PortalPayload = {
 }
 
 type Tab = 'start' | 'tagebuch' | 'plan' | 'kontakt'
-type ThreadMsg = { from: 'coach' | 'me'; text: string; time: string }
+type ThreadMsg = { from: 'coach' | 'me'; text: string; time: string; audioUrl?: string; audioSeconds?: number | null }
 type Entry =
   | { kind: 'day'; label: string }
   | { kind: 'entry'; time: string; title: string; tag: string; detail: string; photo?: string }
@@ -1039,7 +1039,8 @@ export default function MeinProgramm() {
                   return (
                     <div key={i} style={{ display: 'flex', justifyContent: me ? 'flex-end' : 'flex-start' }}>
                       <div style={{ maxWidth: '80%', padding: '11px 14px 9px', fontSize: 14, lineHeight: 1.45, ...(me ? { background: ACC, color: '#fff', borderRadius: '18px 18px 6px 18px' } : { background: '#fff', color: INK, border: `1px solid ${LINE}`, borderRadius: '18px 18px 18px 6px' }) }}>
-                        {m.text}
+                        {m.audioUrl ? <span style={{ display: 'block', fontSize: 12.5, fontWeight: 600 }}>🎙️ {m.text || 'Sprachnachricht'}</span> : m.text}
+                        {m.audioUrl && <audio controls preload="none" src={m.audioUrl} style={{ display: 'block', width: '100%', marginTop: 8 }} />}
                         <span style={{ display: 'block', marginTop: 4, fontSize: 10, textAlign: 'right', color: me ? 'rgba(255,255,255,.7)' : '#A9B7C1' }}>{m.time}</span>
                       </div>
                     </div>
