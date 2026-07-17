@@ -13,10 +13,11 @@
 import { Resend } from 'resend'
 import type { Context } from '@netlify/functions'
 import { getSupabaseCreds, sbInsert, sbDelete } from './_shared/supabase.ts'
-import { renderPreset, getPreset, PresetError } from './_shared/mail-presets.ts'
+import { renderPreset, getPreset, PresetError, MAIL_PRESETS } from './_shared/mail-presets.ts'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { renderInvitePortalMail } from './_shared/invite-portal-core.ts'
+import { renderTemplateMail } from './_shared/template-mail-core.ts'
 import { notifyCC } from './_shared/notify-cc.ts'
 
 const FROM_EMAIL = 'Bright Medical <noreply@brightmedical.de>'
@@ -26,6 +27,24 @@ const REPLY_TO = 'info@brightmedical.de'
 const INVITE_TEMPLATE = (() => {
   try { return readFileSync(fileURLToPath(new URL('../../email-templates/e1i-portal-einladung.html', import.meta.url)), 'utf8') }
   catch (e) { console.error('[cc-send-preset] e1i-Template load failed', e); return '' }
+})()
+
+// Vorlagen der templatebasierten Presets + Logos DIREKT in der Entry-Function laden
+// (Asset-Regel: readFileSync nie im _shared-Modul). Jede Vorlage genau einmal.
+function loadAsset(rel: string): string {
+  try { return readFileSync(fileURLToPath(new URL(`../../${rel}`, import.meta.url)), 'utf8') }
+  catch (e) { console.error(`[cc-send-preset] asset load failed: ${rel}`, e); return '' }
+}
+const TEMPLATE_HTML: Record<string, string> = {}
+for (const p of MAIL_PRESETS) {
+  if (p.template && !(p.template in TEMPLATE_HTML)) {
+    TEMPLATE_HTML[p.template] = loadAsset(`email-templates/${p.template}.html`)
+  }
+}
+const [LOGO_LIGHT, LOGO_DARK] = (() => {
+  const raw = loadAsset('email-templates/_assets/logos-base64.txt')
+  const [light, dark] = raw.split('---SEPARATOR---').map((s) => s.trim())
+  return [light || '', dark || '']
 })()
 
 const CORS_HEADERS = {
@@ -61,7 +80,8 @@ export default async (req: Request, _context: Context) => {
   try { body = await req.json() } catch { return jsonResponse(400, { error: 'Invalid JSON' }) }
 
   const presetKey = typeof body?.presetKey === 'string' ? body.presetKey : ''
-  if (!getPreset(presetKey)) return jsonResponse(400, { error: `Unbekanntes Preset: ${presetKey || '(keins)'}` })
+  const preset = getPreset(presetKey)
+  if (!preset) return jsonResponse(400, { error: `Unbekanntes Preset: ${presetKey || '(keins)'}` })
 
   const email = normEmail(body?.email)
   if (!email || !EMAIL_RE.test(email) || email.length > 254) return jsonResponse(400, { error: 'Invalid or missing "email"' })
@@ -71,7 +91,8 @@ export default async (req: Request, _context: Context) => {
 
   // Render (Preview UND Send — derselbe Pfad = byte-identisch).
   // invite-portal signiert einen Portal-Token + füllt das e1i-Template (eigener Render-Weg);
-  // alle anderen Presets laufen über renderPreset (Marken-Rahmen).
+  // templatebasierte Presets (preset.template) laufen über template-mail-core (byte-gleich zur Mail-App);
+  // alle anderen (e-html) über renderPreset (Marken-Rahmen).
   let rendered
   try {
     if (presetKey === 'invite-portal') {
@@ -79,6 +100,10 @@ export default async (req: Request, _context: Context) => {
       if (!jwtSecret) return jsonResponse(500, { error: 'Server-Konfigurationsfehler (BRIGHT_JWT_SECRET)' })
       if (!INVITE_TEMPLATE) return jsonResponse(500, { error: 'Einladungs-Template nicht im Bundle' })
       rendered = renderInvitePortalMail({ template: INVITE_TEMPLATE, email, fields, jwtSecret })
+    } else if (preset.template) {
+      const templateHtml = TEMPLATE_HTML[preset.template]
+      if (!templateHtml) return jsonResponse(500, { error: `Vorlage nicht im Bundle: ${preset.template}` })
+      rendered = renderTemplateMail({ preset, templateHtml, logoLight: LOGO_LIGHT, logoDark: LOGO_DARK, fields })
     } else {
       rendered = renderPreset(presetKey, fields)
     }
