@@ -48,6 +48,26 @@ export const MAIL_PRESETS: MailPreset[] = [
       },
     ],
   },
+  {
+    // Portal-Zugang: signierter, sicherer Link ins Klient-Portal. Render/Token laufen über
+    // invite-portal-core (cc-send-preset), NICHT über renderPreset — die Felder hier steuern
+    // Dropdown + Formular im Cockpit. Betreff ist fest („Ihr persönlicher Bereich bei Bright Medical").
+    key: 'invite-portal',
+    label: 'Portal-Zugang senden',
+    target: 'Klientin',
+    fields: [
+      { key: 'name', label: 'Vorname', type: 'text', default: '', hint: 'Für die Begrüßung + den Portal-Bereich.', required: true, half: true },
+      { key: 'anrede', label: 'Anrede', type: 'text', default: '', hint: 'z. B. „Liebe Frau Junga,". Leer = „Guten Tag,".', half: true },
+      { key: 'programLabel', label: 'Programm', type: 'text', default: 'Metabolic Deep-Dive', hint: 'Erscheint im Portal und in der Mail.' },
+      { key: 'weekCurrent', label: 'Aktuelle Woche', type: 'number', default: '1', half: true },
+      { key: 'weekTotal', label: 'Wochen gesamt', type: 'number', default: '4', half: true },
+      { key: 'focusTitle', label: 'Fokus-Titel (optional)', type: 'text', default: '', hint: 'Personalisiert die Portal-Startseite.' },
+      { key: 'focusText', label: 'Fokus-Text (optional)', type: 'textarea', default: '' },
+      { key: 'focusStep', label: 'Kleiner Schritt (optional)', type: 'text', default: '' },
+      { key: 'nextCallHuman', label: 'Nächster Termin (optional)', type: 'text', default: '', hint: 'z. B. „Mittwoch, 16.07."' },
+      { key: 'personalNote', label: 'Persönliche Notiz (optional)', type: 'textarea', default: '', hint: 'Erscheint als hervorgehobener Block in der Einladungs-Mail.' },
+    ],
+  },
 ]
 
 export function getPreset(key: string): MailPreset | undefined {

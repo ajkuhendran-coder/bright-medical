@@ -14,10 +14,19 @@ import { Resend } from 'resend'
 import type { Context } from '@netlify/functions'
 import { getSupabaseCreds, sbInsert, sbDelete } from './_shared/supabase.ts'
 import { renderPreset, getPreset, PresetError } from './_shared/mail-presets.ts'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { renderInvitePortalMail } from './_shared/invite-portal-core.ts'
 import { notifyCC } from './_shared/notify-cc.ts'
 
 const FROM_EMAIL = 'Bright Medical <noreply@brightmedical.de>'
 const REPLY_TO = 'info@brightmedical.de'
+
+// Portal-Einladungs-Template DIREKT in der Entry-Function laden (Asset-Regel: readFileSync nie im _shared-Modul).
+const INVITE_TEMPLATE = (() => {
+  try { return readFileSync(fileURLToPath(new URL('../../email-templates/e1i-portal-einladung.html', import.meta.url)), 'utf8') }
+  catch (e) { console.error('[cc-send-preset] e1i-Template load failed', e); return '' }
+})()
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -61,9 +70,18 @@ export default async (req: Request, _context: Context) => {
   const mode = body?.mode === 'send' ? 'send' : 'preview'
 
   // Render (Preview UND Send — derselbe Pfad = byte-identisch).
+  // invite-portal signiert einen Portal-Token + füllt das e1i-Template (eigener Render-Weg);
+  // alle anderen Presets laufen über renderPreset (Marken-Rahmen).
   let rendered
   try {
-    rendered = renderPreset(presetKey, fields)
+    if (presetKey === 'invite-portal') {
+      const jwtSecret = Netlify.env.get('BRIGHT_JWT_SECRET')
+      if (!jwtSecret) return jsonResponse(500, { error: 'Server-Konfigurationsfehler (BRIGHT_JWT_SECRET)' })
+      if (!INVITE_TEMPLATE) return jsonResponse(500, { error: 'Einladungs-Template nicht im Bundle' })
+      rendered = renderInvitePortalMail({ template: INVITE_TEMPLATE, email, fields, jwtSecret })
+    } else {
+      rendered = renderPreset(presetKey, fields)
+    }
   } catch (err) {
     if (err instanceof PresetError) return jsonResponse(400, { error: err.message })
     console.error('[cc-send-preset] render failed', err)
