@@ -671,7 +671,7 @@ export default function MeinProgramm() {
           <div style={{ flex: 'none', padding: 'calc(env(safe-area-inset-top) + 18px) 26px 8px' }}>
             <img src="/images/bright-medical-portal-logo.png" alt="Bright Medical" style={{ height: 27, width: 'auto', display: 'block' }} />
           </div>
-          <div className="mp-scroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '8px 26px 26px' }}>
+          <div className="mp-scroll" style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: '8px 26px 26px' }}>
             {consentState === 'loading' ? (
               <div style={{ textAlign: 'center', color: MUT, fontSize: 14, padding: '60px 0' }}>Einen Moment …</div>
             ) : (
@@ -736,7 +736,7 @@ export default function MeinProgramm() {
         )}
 
         {/* ===== SCROLL-INHALT ===== */}
-        <div className="mp-scroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+        <div className="mp-scroll" style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}>
 
           {/* ---------- START ---------- */}
           {tab === 'start' && (
@@ -1108,8 +1108,8 @@ export default function MeinProgramm() {
 function PortalStyles() {
   return (
     <style>{`
-.mp-page{min-height:100dvh;background:#DDE2E7;display:flex;align-items:stretch;justify-content:center;}
-.mp-app{width:100%;max-width:420px;min-height:100dvh;background:#F7F9FB;display:flex;flex-direction:column;position:relative;color:#14314D;font-family:'Hanken Grotesk',-apple-system,system-ui,sans-serif;}
+.mp-page{height:100dvh;overflow:hidden;background:#DDE2E7;display:flex;align-items:stretch;justify-content:center;}
+.mp-app{width:100%;max-width:420px;height:100dvh;overflow:hidden;background:#F7F9FB;display:flex;flex-direction:column;position:relative;color:#14314D;font-family:'Hanken Grotesk',-apple-system,system-ui,sans-serif;}
 .mp-app *{box-sizing:border-box;}
 .mp-card{background:#fff;border:1px solid #E7EDF2;border-radius:18px;}
 .mp-scroll::-webkit-scrollbar{width:0;height:0;}
