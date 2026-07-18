@@ -8,9 +8,19 @@
 import type { Context } from '@netlify/functions'
 import { verifyPortalToken } from './_shared/jwt.js'
 import { getSupabaseCreds, sbInsert } from './_shared/supabase.ts'
+import { notifyClientConsent } from './_shared/notify-client.ts'
 
 // Textstand der Einwilligungserklärung (coaching-vertrag-einwilligung.pdf, Stand Juni 2026).
 const CONSENT_VERSION = 'einwilligung-gesundheitsdaten-2026-06'
+
+// Menschliche Beschriftungen der Kategorien (spiegeln das Consent-Gate in MeinProgramm.tsx) —
+// für die Bestätigungs-Kopie an die Klientin.
+const CONSENT_LABELS = {
+  cgm: 'Verarbeitung meiner CGM-/Glukosedaten zur individuellen Auswertung und Beratung',
+  photos: 'Verarbeitung von Fotos meines Ernährungstagebuchs zur individuellen Ernährungsanalyse',
+  questionnaire: 'Verarbeitung gesundheitsbezogener Angaben aus Fragebögen und Coaching-Gesprächen',
+  channel: 'Übermittlung dieser Daten über den sicheren, verschlüsselten Kanal von Bright Medical',
+}
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -66,6 +76,17 @@ export default async (req: Request, _context: Context) => {
   try {
     await sbInsert(creds, 'portal_consents', row)
     console.log(`✓ Einwilligung erteilt: ${v.payload.sub} (cgm=${row.consent_cgm} photos=${row.consent_photos} q=${row.consent_questionnaire} channel=${row.consent_channel})`)
+    // Kopie an die Klientin (Art. 7 Rechenschaftspflicht) — best effort, schluckt eigene Fehler.
+    const grantedAtHuman = new Date().toLocaleString('de-DE', {
+      day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin',
+    }) + ' Uhr'
+    const categories = [
+      row.consent_cgm && CONSENT_LABELS.cgm,
+      row.consent_photos && CONSENT_LABELS.photos,
+      row.consent_questionnaire && CONSENT_LABELS.questionnaire,
+      row.consent_channel && CONSENT_LABELS.channel,
+    ].filter((x): x is string => typeof x === 'string')
+    await notifyClientConsent({ clientEmail: v.payload.sub, name: v.payload.name, categories, grantedAtHuman, version: CONSENT_VERSION })
     return jsonResponse(200, { ok: true })
   } catch (err) {
     console.error('[submit-portal-einwilligung] insert failed', err)

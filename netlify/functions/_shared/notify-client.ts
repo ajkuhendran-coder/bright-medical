@@ -100,3 +100,50 @@ export async function notifyClientNewPlan(opts: { clientEmail: string }): Promis
     console.error('[notify-client] plan notification failed', err)
   }
 }
+
+// Kopie der erteilten Art.-9-Einwilligung an die Klientin (Rechenschaftspflicht, Art. 7 DSGVO).
+// Enthält KEINE Gesundheitsdaten — nur die Kategorien, in die eingewilligt wurde, Zeitpunkt + Textstand.
+export async function notifyClientConsent(opts: {
+  clientEmail: string
+  name?: string
+  categories: string[]
+  grantedAtHuman: string
+  version: string
+}): Promise<void> {
+  try {
+    const apiKey = process.env.RESEND_API_KEY
+    if (!apiKey) return
+    const hallo = opts.name?.trim() ? `Guten Tag ${escapeHtml(opts.name.trim())},` : 'Guten Tag,'
+    const liste = opts.categories.length
+      ? `<ul style="margin:6px 0 0;padding-left:20px;">${opts.categories.map((c) => `<li style="margin-bottom:8px;line-height:1.5;">${escapeHtml(c)}</li>`).join('')}</ul>`
+      : ''
+    const html = brandedNotificationEmail({
+      eyebrow: 'Ihre Einwilligung',
+      title: 'Ihre Einwilligung ist bestätigt',
+      paragraphs: [
+        hallo,
+        `Sie haben am ${escapeHtml(opts.grantedAtHuman)} in Ihrem persönlichen Bereich „Mein Programm" in die Verarbeitung Ihrer Gesundheitsdaten eingewilligt (Art. 9 DSGVO). Zur Sicherheit erhalten Sie hier eine Kopie für Ihre Unterlagen.`,
+        `<strong style="color:#0A2540;">Sie haben eingewilligt in:</strong>${liste}`,
+        `Ihre Einwilligung ist freiwillig und jederzeit mit Wirkung für die Zukunft widerrufbar — per E-Mail an <a href="mailto:info@brightmedical.de" style="color:#0891b2;">info@brightmedical.de</a>.`,
+      ],
+      noteHtml: `Textstand der Einwilligung: ${escapeHtml(opts.version)}. Bitte bewahren Sie diese E-Mail für Ihre Unterlagen auf. <strong>Bitte antworten Sie nicht auf diese E-Mail.</strong>`,
+    })
+    const resend = new Resend(apiKey)
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      replyTo: REPLY_TO,
+      to: opts.clientEmail,
+      subject: 'Ihre Einwilligung bei Bright Medical — Ihre Kopie',
+      html,
+      text:
+        `${opts.name?.trim() ? `Guten Tag ${opts.name.trim()},` : 'Guten Tag,'}\n\n` +
+        `Sie haben am ${opts.grantedAtHuman} in Ihrem Bereich „Mein Programm" in die Verarbeitung Ihrer Gesundheitsdaten eingewilligt (Art. 9 DSGVO). Hier Ihre Kopie für Ihre Unterlagen.\n\n` +
+        `Sie haben eingewilligt in:\n${opts.categories.map((c) => `• ${c}`).join('\n')}\n\n` +
+        `Ihre Einwilligung ist freiwillig und jederzeit mit Wirkung für die Zukunft widerrufbar — per E-Mail an info@brightmedical.de.\n\n` +
+        `Textstand: ${opts.version}\n\n` +
+        `Herzliche Grüße\nBright Medical\n\n(Automatische Kopie. Bitte antworten Sie nicht auf diese E-Mail.)`,
+    })
+  } catch (err) {
+    console.error('[notify-client] consent copy failed', err)
+  }
+}
