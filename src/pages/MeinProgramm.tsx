@@ -47,6 +47,13 @@ type Entry =
 // Plan-Bausteine (festes Vokabular, kommen als JSONB aus portal_plans — bewusst lose typisiert).
 type PlanSectionData = { type: string; title?: string; body?: string; items?: string[]; variant?: string; plate?: boolean }
 type PlanData = { title: string; intro: string | null; sections: PlanSectionData[]; version: number; updatedAt: string }
+// LIVE Start-Inhalte (server-getrieben aus portal_state; überschreiben die Token-Werte, sonst Fallback).
+type PortalState = {
+  weekCurrent: number | null; weekTotal: number | null
+  focusTitle: string | null; focusText: string | null; focusStep: string | null
+  nextCallHuman: string | null; nextCallUrl: string | null
+  completed: boolean; updatedAt: string | null
+}
 
 const TAG_COLORS: Record<string, [string, string]> = {
   Mahlzeit: ['#E7F6FA', '#0E7E9C'],
@@ -454,6 +461,7 @@ export default function MeinProgramm() {
   const [thread, setThread] = useState<ThreadMsg[]>([])
   const [entries, setEntries] = useState<Entry[]>([])
   const [plan, setPlan] = useState<PlanData | null>(null)
+  const [portalState, setPortalState] = useState<PortalState | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const threadEndRef = useRef<HTMLDivElement>(null)
   const [noteOpen, setNoteOpen] = useState(false)
@@ -546,9 +554,23 @@ export default function MeinProgramm() {
     finally { setLoading((l) => (l.plan ? { ...l, plan: false } : l)) }
   }, [token])
 
+  // Live Start-Inhalte (Woche/Fokus/Termin) — server-getrieben; fehlt der State, greifen die Token-Werte.
+  const loadState = useCallback(async () => {
+    if (!token) return
+    try {
+      const res = await fetch('/.netlify/functions/portal-state', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }),
+      })
+      if (!res.ok) return
+      const data = await res.json()
+      if (data?.configured && data.state) setPortalState(data.state as PortalState)
+    } catch { /* offline → Token-Werte bleiben */ }
+  }, [token])
+
   useEffect(() => { void loadThread() }, [loadThread])
   useEffect(() => { void loadDiary() }, [loadDiary])
   useEffect(() => { void loadPlan() }, [loadPlan])
+  useEffect(() => { void loadState() }, [loadState])
 
   // Beim Zurückkehren in die App (Tab/PWA wieder im Vordergrund) frisch laden:
   // sonst zeigt die installierte App tagelang alte Nachrichten/Pläne, und die
@@ -560,10 +582,11 @@ export default function MeinProgramm() {
       void loadThread()
       void loadDiary()
       void loadPlan()
+      void loadState()
     }
     document.addEventListener('visibilitychange', onVisible)
     return () => document.removeEventListener('visibilitychange', onVisible)
-  }, [token, loadThread, loadDiary, loadPlan])
+  }, [token, loadThread, loadDiary, loadPlan, loadState])
 
   // Chat: bei Öffnen des Kontakt-Tabs + bei neuer Nachricht ans Ende springen
   // (bei langem Verlauf sonst mühsames Scrollen zum Neuesten).
@@ -831,13 +854,19 @@ export default function MeinProgramm() {
   }
 
   const initials = payload.initials || payload.name.slice(0, 2).toUpperCase()
-  const focusTitle = payload.focusTitle || 'Willkommen'
-  const focusText = payload.focusText || 'Ihr Coach hinterlegt hier jede Woche Ihren Fokus. Es geht gleich los.'
-  const focusStep = payload.focusStep || 'Wir starten gemeinsam im ersten Gespräch.'
+  // Effektive Start-Inhalte: LIVE aus portal_state (falls gesetzt), sonst die Token-Werte (Fallback).
+  const s = portalState
+  const wkCurrent = s?.weekCurrent ?? payload.weekCurrent
+  const wkTotal = s?.weekTotal ?? payload.weekTotal
+  const focusTitle = s?.focusTitle || payload.focusTitle || 'Willkommen'
+  const focusText = s?.focusText || payload.focusText || 'Ihr Coach hinterlegt hier jede Woche Ihren Fokus. Es geht gleich los.'
+  const focusStep = s?.focusStep || payload.focusStep || 'Wir starten gemeinsam im ersten Gespräch.'
+  const nextCallHuman = s?.nextCallHuman || payload.nextCallHuman || ''
+  const nextCallUrl = s?.nextCallUrl || payload.nextCallUrl || ''
 
-  // Programm abgeschlossen: Dr. K sendet einen finalen Portal-Link mit weekCurrent > weekTotal
-  // (z. B. „5 von 4"). Dann zeigt der Start-Tab statt Fortschritt/Fokus einen würdigen Abschluss.
-  const abgeschlossen = payload.weekCurrent > payload.weekTotal
+  // Programm abgeschlossen: vom Coach im Cockpit gesetzt (state.completed) ODER finaler Token
+  // mit weekCurrent > weekTotal. Dann zeigt der Start-Tab statt Fortschritt/Fokus den Abschluss.
+  const abgeschlossen = (s?.completed ?? false) || wkCurrent > wkTotal
   const navColor = (t: Tab) => (tab === t ? INK : OFF)
   const navWeight = (t: Tab) => (tab === t ? 600 : 500)
 
@@ -919,11 +948,11 @@ export default function MeinProgramm() {
               <div style={{ padding: '18px 26px 4px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 9 }}>
                   <span style={{ fontSize: 12, fontWeight: 600, letterSpacing: '.1em', color: MUT, textTransform: 'uppercase' }}>Ihr Programm</span>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: INK }}>Woche {payload.weekCurrent} von {payload.weekTotal}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: INK }}>Woche {wkCurrent} von {wkTotal}</span>
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>
-                  {Array.from({ length: payload.weekTotal }).map((_, i) => (
-                    <div key={i} style={{ flex: 1, height: 5, borderRadius: 3, background: i < payload.weekCurrent ? ACC : '#DDE6EC' }} />
+                  {Array.from({ length: wkTotal }).map((_, i) => (
+                    <div key={i} style={{ flex: 1, height: 5, borderRadius: 3, background: i < wkCurrent ? ACC : '#DDE6EC' }} />
                   ))}
                 </div>
               </div>
@@ -967,14 +996,14 @@ export default function MeinProgramm() {
                   <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#EAF0F4', color: INK, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, fontSize: 13 }}>AJ</div>
                   <div>
                     <div style={{ fontSize: 15, fontWeight: 600, color: INK }}>Ajanth · Health Coach</div>
-                    <div style={{ fontSize: 13, color: MUT }}>{payload.nextCallHuman || 'Termin wird abgestimmt'}</div>
+                    <div style={{ fontSize: 13, color: MUT }}>{nextCallHuman || 'Termin wird abgestimmt'}</div>
                   </div>
                 </div>
                 <a
-                  href={payload.nextCallUrl || undefined}
-                  target={payload.nextCallUrl ? '_blank' : undefined}
+                  href={nextCallUrl || undefined}
+                  target={nextCallUrl ? '_blank' : undefined}
                   rel="noreferrer"
-                  style={{ marginTop: 14, width: '100%', boxSizing: 'border-box', border: `1.5px solid ${ACC}`, background: '#fff', color: ACC_DK, fontFamily: 'inherit', fontSize: 15, fontWeight: 600, padding: 13, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, cursor: 'pointer', textDecoration: 'none', opacity: payload.nextCallUrl ? 1 : 0.55 }}
+                  style={{ marginTop: 14, width: '100%', boxSizing: 'border-box', border: `1.5px solid ${ACC}`, background: '#fff', color: ACC_DK, fontFamily: 'inherit', fontSize: 15, fontWeight: 600, padding: 13, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, cursor: 'pointer', textDecoration: 'none', opacity: nextCallUrl ? 1 : 0.55 }}
                 >
                   <CamIcon /> Zum Video-Gespräch
                 </a>
@@ -1201,9 +1230,9 @@ export default function MeinProgramm() {
                 <span style={{ color: ACC, flex: 'none', display: 'flex' }}><CamIcon s={22} /></span>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 14, fontWeight: 600, color: INK }}>Video-Gespräch</div>
-                  <div style={{ fontSize: 12.5, color: MUT }}>{payload.nextCallHuman || 'Termin stimmen wir ab'}</div>
+                  <div style={{ fontSize: 12.5, color: MUT }}>{nextCallHuman || 'Termin stimmen wir ab'}</div>
                 </div>
-                <a href={payload.nextCallUrl || undefined} target={payload.nextCallUrl ? '_blank' : undefined} rel="noreferrer" style={{ flex: 'none', border: 'none', background: ACC, color: '#fff', fontFamily: 'inherit', fontSize: 13, fontWeight: 600, padding: '9px 14px', borderRadius: 10, cursor: 'pointer', textDecoration: 'none' }}>Beitreten</a>
+                <a href={nextCallUrl || undefined} target={nextCallUrl ? '_blank' : undefined} rel="noreferrer" style={{ flex: 'none', border: 'none', background: ACC, color: '#fff', fontFamily: 'inherit', fontSize: 13, fontWeight: 600, padding: '9px 14px', borderRadius: 10, cursor: 'pointer', textDecoration: 'none' }}>Beitreten</a>
               </div>
 
               <LockNote>Verschlüsselter Verlauf — kein WhatsApp nötig. Bei medizinischen Notfällen wenden Sie sich bitte an Ihre Ärztin oder den Notruf 112.</LockNote>

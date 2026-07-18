@@ -32,6 +32,23 @@ export async function sbInsert(
   return res.json()
 }
 
+// PostgREST: upsert auf eine Konflikt-Spalte (merge-duplicates). Nur die im Payload gesetzten
+// Spalten werden bei Konflikt aktualisiert (partielles Update möglich). Gibt die Zeile(n) zurück.
+export async function sbUpsert(
+  creds: SupabaseCreds,
+  table: string,
+  row: Record<string, unknown> | Record<string, unknown>[],
+  onConflict: string,
+): Promise<any[]> {
+  const res = await fetch(`${creds.url}/rest/v1/${table}?on_conflict=${encodeURIComponent(onConflict)}`, {
+    method: 'POST',
+    headers: { ...authHeaders(creds), 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=representation' },
+    body: JSON.stringify(row),
+  })
+  if (!res.ok) throw new Error(`Supabase upsert ${table} ${res.status}: ${await res.text()}`)
+  return res.json()
+}
+
 // PostgREST: delete (query = PostgREST-Filter, z. B. "idempotency_key=eq.abc") — u. a. für Idempotenz-Rollback
 export async function sbDelete(creds: SupabaseCreds, table: string, query: string): Promise<void> {
   const res = await fetch(`${creds.url}/rest/v1/${table}?${query}`, { method: 'DELETE', headers: authHeaders(creds) })
