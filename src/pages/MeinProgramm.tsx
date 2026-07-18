@@ -87,6 +87,29 @@ function greeting(): string {
 function nowTime(): string {
   return new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' })
 }
+// Mahlzeit-Typen fürs Foto-Zuordnungs-Blatt.
+const MEAL_TYPES = [
+  { emoji: '🌅', label: 'Frühstück' },
+  { emoji: '☀️', label: 'Mittagessen' },
+  { emoji: '🌙', label: 'Abendessen' },
+  { emoji: '🍎', label: 'Zwischendurch' },
+] as const
+function mealTypeForHour(h: number): string {
+  if (h < 11) return 'Frühstück'
+  if (h < 15) return 'Mittagessen'
+  if (h >= 17) return 'Abendessen'
+  return 'Zwischendurch'
+}
+// Ess-Zeitpunkt (ISO) aus Tag-Wahl + Uhrzeit — in Geräte-Zeit (= Zeit der Klientin).
+// „heute" mit Zukunftszeit wird auf jetzt begrenzt (sonst weist der Server sie ab).
+function buildEatenAtIso(day: 'heute' | 'gestern', hm: string): string {
+  const [hh, mm] = (hm || '').split(':').map((x) => parseInt(x, 10))
+  const d = new Date()
+  if (day === 'gestern') d.setDate(d.getDate() - 1)
+  d.setHours(Number.isFinite(hh) ? hh : 0, Number.isFinite(mm) ? mm : 0, 0, 0)
+  if (d.getTime() > Date.now()) d.setTime(Date.now())
+  return d.toISOString()
+}
 // Datums-Schlüssel (YYYY-MM-DD) IN Europe/Berlin — damit Heute/Gestern unabhängig
 // von der Geräte-Zeitzone korrekt entschieden werden (en-CA liefert ISO-Datum).
 function berlinDayKey(d: Date): string {
@@ -109,18 +132,22 @@ function prependToday(prev: Entry[], entry: Entry): Entry[] {
   return [{ kind: 'day', label: today }, entry, ...prev]
 }
 // Server-Einträge (neueste zuerst) in die Tages-gruppierte Render-Liste umbauen.
-type ServerEntry = { time_label?: string; title: string; tag: string; detail?: string; photoUrl?: string | null; created_at: string }
+type ServerEntry = { time_label?: string; title: string; tag: string; detail?: string; photoUrl?: string | null; created_at: string; eaten_at?: string | null }
 function toInterleaved(rows: ServerEntry[]): Entry[] {
+  const eff = (r: ServerEntry) => new Date(r.eaten_at || r.created_at)
+  const berlinHM = (d: Date) => d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' })
+  // Nach Ess-Zeitpunkt (eaten_at, sonst Upload-Zeit created_at) sortieren + nach Tag gruppieren.
+  const sorted = [...rows].sort((a, b) => eff(b).getTime() - eff(a).getTime())
   const out: Entry[] = []
   let last = ''
-  for (const r of rows) {
-    const d = new Date(r.created_at)
+  for (const r of sorted) {
+    const d = eff(r)
     const ok = !isNaN(d.getTime())
     const label = ok ? dayLabel(d) : ''
     if (label && label !== last) { out.push({ kind: 'day', label }); last = label }
     out.push({
       kind: 'entry',
-      time: r.time_label || (ok ? d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' }) : ''),
+      time: r.eaten_at && ok ? berlinHM(d) : (r.time_label || (ok ? berlinHM(d) : '')),
       title: r.title,
       tag: r.tag,
       detail: r.detail || '',
@@ -407,6 +434,15 @@ export default function MeinProgramm() {
     try { return localStorage.getItem(`mp-focus-${payload?.weekCurrent ?? 0}`) === '1' } catch { return false }
   })
   const [lightbox, setLightbox] = useState<string | null>(null)
+  // Foto-Zuordnungs-Blatt: Warteschlange der gewählten Fotos + Auswahl (Typ / Tag / Uhrzeit).
+  const [photoQueue, setPhotoQueue] = useState<File[]>([])
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [mealType, setMealType] = useState<string>('Mittagessen')
+  const [mealDay, setMealDay] = useState<'heute' | 'gestern'>('heute')
+  const [mealTime, setMealTime] = useState<string>('')
+  const [sheetBusy, setSheetBusy] = useState(false)
+  const [noteDay, setNoteDay] = useState<'heute' | 'gestern'>('heute')
+  const [noteTime, setNoteTime] = useState<string>('')
   const [loading, setLoading] = useState({ thread: true, diary: true, plan: true })
   const [seenCoachCount, setSeenCoachCount] = useState(() => {
     try { return Number(localStorage.getItem('mp-seen-coach') || 0) } catch { return 0 }
@@ -546,6 +582,21 @@ export default function MeinProgramm() {
     }
   }, [tab, coachCount, seenCoachCount])
 
+  // Foto-Zuordnungs-Blatt: Vorschau-URL fürs vorderste Foto verwalten (sauber freigeben).
+  useEffect(() => {
+    const f = photoQueue[0]
+    if (!f) { setPreviewUrl(null); return }
+    const u = URL.createObjectURL(f)
+    setPreviewUrl(u)
+    return () => URL.revokeObjectURL(u)
+  }, [photoQueue])
+  // Bei neuem vordersten Foto: Typ nach Tageszeit vorwählen + Uhrzeit auf jetzt (Tag bleibt stehen).
+  useEffect(() => {
+    if (photoQueue.length === 0) return
+    setMealType(mealTypeForHour(parseInt(nowTime().split(':')[0], 10)))
+    setMealTime(nowTime())
+  }, [photoQueue])
+
   // --- Push-Benachrichtigung (freiwillig, nur nach Consent) ---
   const savePush = useCallback(async (sub: PushSubscription) => {
     if (!token) return
@@ -629,7 +680,8 @@ export default function MeinProgramm() {
   function saveNote() {
     const t = noteText.trim()
     if (!t) return
-    const time = nowTime()
+    const time = noteTime || nowTime()
+    const eatenAtIso = buildEatenAtIso(noteDay, time)
     const title = t.slice(0, 120)
     const tag = noteTag
     setEntries((prev) => prependToday(prev, { kind: 'entry', time, title, tag, detail: '' }))
@@ -638,7 +690,7 @@ export default function MeinProgramm() {
     setWriteError('')
     if (!token) return
     fetch('/.netlify/functions/submit-portal-diary', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, title, tag, time }),
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, title, tag, time, eatenAt: eatenAtIso }),
     })
       .then((res) => {
         if (res.status === 503) return // kein Backend → lokale Notiz behalten
@@ -647,34 +699,47 @@ export default function MeinProgramm() {
       })
       .catch(() => { /* offline → Notiz bleibt lokal sichtbar */ })
   }
-  async function onPickPhoto(e: ChangeEvent<HTMLInputElement>) {
+  function onPickPhoto(e: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []).filter((f) => f.type.startsWith('image/'))
     e.target.value = ''
     setWriteError('')
-    let failed = 0
-    for (const f of files) {
-      let dataUrl: string
-      try { dataUrl = await compressImage(f) } catch { failed++; continue }
-      const time = nowTime()
-      // optimistisch anzeigen
-      setEntries((prev) => prependToday(prev, { kind: 'entry', time, title: 'Mahlzeit-Foto', tag: 'Foto', detail: '', photo: dataUrl }))
-      if (!token) continue
-      // verschlüsselt in Supabase Storage (EU) ablegen, dann mit Server abgleichen
+    if (files.length) setPhotoQueue(files) // → Zuordnungs-Blatt (Typ / Tag / Uhrzeit), dann Upload
+  }
+  // Ein Foto aus der Warteschlange speichern — mit Zuordnung (Speichern) oder „Überspringen" (alter Weg).
+  async function submitPhoto(skip: boolean) {
+    const file = photoQueue[0]
+    if (!file || sheetBusy) return
+    setSheetBusy(true)
+    setWriteError('')
+    let dataUrl: string
+    try {
+      dataUrl = await compressImage(file)
+    } catch {
+      setSheetBusy(false)
+      setPhotoQueue((q) => q.slice(1))
+      setWriteError('Ein Foto konnte nicht gelesen werden. Bitte ein anderes Bild versuchen.')
+      return
+    }
+    const eatenAtIso = skip ? undefined : buildEatenAtIso(mealDay, mealTime || nowTime())
+    const title = skip ? 'Mahlzeit-Foto' : mealType
+    const tag = skip ? 'Foto' : 'Mahlzeit'
+    const time = skip ? nowTime() : (mealTime || nowTime())
+    // optimistisch anzeigen (loadDiary korrigiert danach die Tages-Gruppierung nach eaten_at)
+    setEntries((prev) => prependToday(prev, { kind: 'entry', time, title, tag, detail: '', photo: dataUrl }))
+    if (token) {
       try {
         const res = await fetch('/.netlify/functions/submit-portal-diary', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token, title: 'Mahlzeit-Foto', tag: 'Foto', time, photoBase64: dataUrl.split(',')[1], photoType: 'image/jpeg' }),
+          body: JSON.stringify({ token, title, tag, time, ...(eatenAtIso ? { eatenAt: eatenAtIso } : {}), photoBase64: dataUrl.split(',')[1], photoType: 'image/jpeg' }),
         })
-        if (res.status === 503) continue // kein Backend → lokale Vorschau behalten
-        if (!res.ok) setWriteError('Foto konnte nicht gespeichert werden. Bitte erneut versuchen.')
-        void loadDiary()
+        if (res.status !== 503) {
+          if (!res.ok) setWriteError('Foto konnte nicht gespeichert werden. Bitte erneut versuchen.')
+          void loadDiary()
+        }
       } catch { /* offline → lokale Vorschau behalten */ }
     }
-    if (failed > 0) {
-      setWriteError(failed === 1
-        ? 'Ein Foto konnte nicht gelesen werden. Bitte versuchen Sie es mit einem anderen Bild.'
-        : `${failed} Fotos konnten nicht gelesen werden. Bitte erneut versuchen.`)
-    }
+    setSheetBusy(false)
+    setPhotoQueue((q) => q.slice(1))
   }
 
   function submitConsent() {
@@ -968,7 +1033,7 @@ export default function MeinProgramm() {
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>
                     Foto
                   </button>
-                  <button onClick={() => setNoteOpen((v) => !v)} style={{ border: 'none', background: INK, color: '#fff', fontFamily: 'inherit', fontSize: 13, fontWeight: 600, padding: '9px 14px', borderRadius: 11, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                  <button onClick={() => setNoteOpen((v) => { const nv = !v; if (nv) { setNoteDay('heute'); setNoteTime(nowTime()) } return nv })} style={{ border: 'none', background: INK, color: '#fff', fontFamily: 'inherit', fontSize: 13, fontWeight: 600, padding: '9px 14px', borderRadius: 11, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
                     Eintrag
                   </button>
@@ -995,6 +1060,11 @@ export default function MeinProgramm() {
                         <button key={tg} onClick={() => setNoteTag(tg)} style={{ fontSize: 11, fontWeight: 600, padding: '5px 11px', borderRadius: 20, cursor: 'pointer', fontFamily: 'inherit', border: active ? `1.5px solid ${col}` : '1px solid #E3E8EE', background: active ? bg : '#fff', color: active ? col : MUT }}>{tg}</button>
                       )
                     })}
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, marginTop: 10, alignItems: 'center' }}>
+                    <button onClick={() => setNoteDay('heute')} style={{ fontSize: 11, fontWeight: 600, padding: '5px 12px', borderRadius: 20, cursor: 'pointer', fontFamily: 'inherit', border: noteDay === 'heute' ? `1.5px solid ${ACC}` : '1px solid #E3E8EE', background: noteDay === 'heute' ? '#F2FAFC' : '#fff', color: noteDay === 'heute' ? ACC_DK : MUT }}>Heute</button>
+                    <button onClick={() => setNoteDay('gestern')} style={{ fontSize: 11, fontWeight: 600, padding: '5px 12px', borderRadius: 20, cursor: 'pointer', fontFamily: 'inherit', border: noteDay === 'gestern' ? `1.5px solid ${ACC}` : '1px solid #E3E8EE', background: noteDay === 'gestern' ? '#F2FAFC' : '#fff', color: noteDay === 'gestern' ? ACC_DK : MUT }}>Gestern</button>
+                    <input type="time" value={noteTime} onChange={(e) => setNoteTime(e.target.value)} aria-label="Uhrzeit" style={{ marginLeft: 'auto', border: '1px solid #DEE6EC', borderRadius: 10, padding: '7px 10px', fontFamily: 'inherit', fontSize: 16, color: INK, background: '#F7F9FB' }} />
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 12, alignItems: 'center' }}>
                     <button onClick={() => { setNoteOpen(false); setNoteText('') }} style={{ border: 'none', background: 'none', color: MUT, fontFamily: 'inherit', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Abbrechen</button>
@@ -1180,6 +1250,31 @@ export default function MeinProgramm() {
           </button>
         </div>
       </div>
+      {photoQueue.length > 0 && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'rgba(10,20,32,0.5)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+          <div style={{ width: '100%', maxWidth: 420, background: '#fff', borderRadius: '20px 20px 0 0', padding: '18px 22px calc(env(safe-area-inset-bottom) + 20px)', maxHeight: '92dvh', overflowY: 'auto' }}>
+            {photoQueue.length > 1 && <div style={{ fontSize: 12, fontWeight: 600, color: MUT, marginBottom: 8 }}>Foto 1 von {photoQueue.length}</div>}
+            {previewUrl && <img src={previewUrl} alt="Vorschau" style={{ width: '100%', maxHeight: 190, objectFit: 'cover', borderRadius: 12, marginBottom: 16 }} />}
+            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.1em', color: MUT, textTransform: 'uppercase', marginBottom: 9 }}>Was war das?</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 18 }}>
+              {MEAL_TYPES.map((m) => {
+                const on = mealType === m.label
+                return (
+                  <button key={m.label} onClick={() => setMealType(m.label)} style={{ fontSize: 13.5, fontWeight: 600, padding: '10px 14px', borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit', border: on ? `1.5px solid ${ACC}` : '1px solid #E3E8EE', background: on ? '#F2FAFC' : '#fff', color: on ? ACC_DK : INK }}>{m.emoji} {m.label}</button>
+                )
+              })}
+            </div>
+            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.1em', color: MUT, textTransform: 'uppercase', marginBottom: 9 }}>Wann gegessen?</div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 20 }}>
+              <button onClick={() => setMealDay('heute')} style={{ fontSize: 13.5, fontWeight: 600, padding: '10px 16px', borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit', border: mealDay === 'heute' ? `1.5px solid ${ACC}` : '1px solid #E3E8EE', background: mealDay === 'heute' ? '#F2FAFC' : '#fff', color: mealDay === 'heute' ? ACC_DK : INK }}>Heute</button>
+              <button onClick={() => setMealDay('gestern')} style={{ fontSize: 13.5, fontWeight: 600, padding: '10px 16px', borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit', border: mealDay === 'gestern' ? `1.5px solid ${ACC}` : '1px solid #E3E8EE', background: mealDay === 'gestern' ? '#F2FAFC' : '#fff', color: mealDay === 'gestern' ? ACC_DK : INK }}>Gestern</button>
+              <input type="time" value={mealTime} onChange={(e) => setMealTime(e.target.value)} aria-label="Uhrzeit" style={{ marginLeft: 'auto', border: `1px solid ${LINE}`, borderRadius: 12, padding: '9px 12px', fontFamily: 'inherit', fontSize: 16, color: INK, background: '#F7F9FB' }} />
+            </div>
+            <button onClick={() => submitPhoto(false)} disabled={sheetBusy} style={{ width: '100%', border: 'none', background: INK, color: '#fff', fontFamily: 'inherit', fontSize: 15, fontWeight: 600, padding: 15, borderRadius: 12, cursor: sheetBusy ? 'default' : 'pointer', opacity: sheetBusy ? 0.6 : 1 }}>{sheetBusy ? 'Wird gespeichert …' : 'Speichern'}</button>
+            <button onClick={() => submitPhoto(true)} disabled={sheetBusy} style={{ width: '100%', border: 'none', background: 'none', color: MUT, fontFamily: 'inherit', fontSize: 13.5, fontWeight: 600, padding: '12px 0 0', cursor: sheetBusy ? 'default' : 'pointer' }}>Überspringen</button>
+          </div>
+        </div>
+      )}
       {lightbox && (
         <div onClick={() => setLightbox(null)} style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(10,20,32,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, cursor: 'zoom-out' }}>
           <img src={lightbox} alt="Foto in Großansicht" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 12 }} />

@@ -50,12 +50,21 @@ export default async (req: Request, _context: Context) => {
   if (!email || !EMAIL_RE.test(email) || email.length > 254) return jsonResponse(400, { error: 'Invalid or missing "email"' })
   const limit = Number.isFinite(body?.limit) ? Math.min(500, Math.max(1, Math.floor(body.limit))) : 100
 
+  const base = `client_sub=eq.${encodeURIComponent(email)}&order=created_at.desc`
+  let rows: any[]
   try {
-    const rows = await sbSelect(
-      creds,
-      'portal_diary',
-      `client_sub=eq.${encodeURIComponent(email)}&order=created_at.desc&select=id,time_label,title,tag,detail,photo_path,created_at&limit=${limit}`,
-    )
+    rows = await sbSelect(creds, 'portal_diary', `${base}&select=id,time_label,title,tag,detail,photo_path,created_at,eaten_at&limit=${limit}`)
+  } catch (err) {
+    // eaten_at-Spalte evtl. noch nicht angelegt → Fallback ohne (created_at bleibt die Zeit).
+    console.warn('[cc-client-diary] Select mit eaten_at fehlgeschlagen, Fallback ohne', (err as Error).message)
+    try {
+      rows = await sbSelect(creds, 'portal_diary', `${base}&select=id,time_label,title,tag,detail,photo_path,created_at&limit=${limit}`)
+    } catch (err2) {
+      console.error('[cc-client-diary] supabase select failed', err2)
+      return jsonResponse(500, { error: 'Tagebuch konnte nicht geladen werden.' })
+    }
+  }
+  try {
     const entries = await Promise.all(
       rows.map(async (r) => {
         let photoUrl: string | null = null
@@ -70,12 +79,13 @@ export default async (req: Request, _context: Context) => {
           detail: r.detail,
           photoUrl,
           created_at: r.created_at,
+          eaten_at: r.eaten_at ?? null,
         }
       }),
     )
     return jsonResponse(200, { ok: true, count: entries.length, entries })
   } catch (err) {
-    console.error('[cc-client-diary] supabase select failed', err)
+    console.error('[cc-client-diary] signed url failed', err)
     return jsonResponse(500, { error: 'Tagebuch konnte nicht geladen werden.' })
   }
 }

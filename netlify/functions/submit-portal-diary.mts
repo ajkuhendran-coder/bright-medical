@@ -72,6 +72,18 @@ export default async (req: Request, _context: Context) => {
   const detail = (typeof body?.detail === 'string' ? body.detail.trim() : '').slice(0, MAX_DETAIL) || null
   const time = typeof body?.time === 'string' ? body.time.trim().slice(0, 16) : null
 
+  // Ess-Zeitpunkt (vom Klienten gemeint, ISO). Fehlt → jetzt. Nicht in der Zukunft (+15 min
+  // Toleranz), höchstens 7 Tage zurück (gegen Fehleingaben/Missbrauch).
+  let eatenAtIso = new Date().toISOString()
+  if (typeof body?.eatenAt === 'string' && body.eatenAt) {
+    const t = Date.parse(body.eatenAt)
+    const now = Date.now()
+    if (Number.isNaN(t) || t > now + 15 * 60 * 1000 || t < now - 7 * 24 * 60 * 60 * 1000) {
+      return jsonResponse(400, { error: 'Zeitpunkt ungültig (nicht in der Zukunft, höchstens 7 Tage zurück).' })
+    }
+    eatenAtIso = new Date(t).toISOString()
+  }
+
   // Optionales Foto in den privaten Storage laden
   let photoPath: string | null = null
   if (typeof body?.photoBase64 === 'string' && body.photoBase64) {
@@ -90,21 +102,32 @@ export default async (req: Request, _context: Context) => {
     }
   }
 
+  const insertRow: Record<string, unknown> = {
+    client_sub: payload.sub,
+    subject_id: payload.subjectId ?? null,
+    time_label: time,
+    title,
+    tag,
+    detail,
+    photo_path: photoPath,
+    eaten_at: eatenAtIso,
+  }
   let row: any
   try {
-    const rows = await sbInsert(creds, 'portal_diary', {
-      client_sub: payload.sub,
-      subject_id: payload.subjectId ?? null,
-      time_label: time,
-      title,
-      tag,
-      detail,
-      photo_path: photoPath,
-    })
+    const rows = await sbInsert(creds, 'portal_diary', insertRow)
     row = Array.isArray(rows) ? rows[0] : rows
   } catch (err) {
-    console.error('[submit-portal-diary] supabase insert failed', err)
-    return jsonResponse(500, { error: 'Eintrag konnte nicht gespeichert werden.' })
+    // eaten_at-Spalte evtl. noch nicht angelegt (SQL noch nicht ausgeführt) → ohne sie erneut
+    // versuchen, damit ein Deploy VOR der SQL das Speichern nicht bricht (created_at bleibt die Zeit).
+    console.warn('[submit-portal-diary] Insert mit eaten_at fehlgeschlagen, Retry ohne', (err as Error).message)
+    try {
+      const { eaten_at, ...legacy } = insertRow
+      const rows = await sbInsert(creds, 'portal_diary', legacy)
+      row = Array.isArray(rows) ? rows[0] : rows
+    } catch (err2) {
+      console.error('[submit-portal-diary] supabase insert failed', err2)
+      return jsonResponse(500, { error: 'Eintrag konnte nicht gespeichert werden.' })
+    }
   }
 
   let photoUrl: string | null = null
@@ -128,6 +151,6 @@ export default async (req: Request, _context: Context) => {
   console.log(`✓ Portal-Tagebuch: ${payload.sub} (${tag}${photoPath ? '+Foto' : ''}, token=${tokenIdShort(token)})`)
   return jsonResponse(200, {
     ok: true,
-    entry: { id: row?.id, time_label: row?.time_label, title: row?.title, tag: row?.tag, detail: row?.detail, photoUrl, created_at: row?.created_at },
+    entry: { id: row?.id, time_label: row?.time_label, title: row?.title, tag: row?.tag, detail: row?.detail, photoUrl, created_at: row?.created_at, eaten_at: row?.eaten_at ?? null },
   })
 }

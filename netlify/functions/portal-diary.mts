@@ -39,12 +39,22 @@ export default async (req: Request, _context: Context) => {
   const creds = getSupabaseCreds()
   if (!creds) return jsonResponse(200, { ok: true, configured: false, entries: [] })
 
+  const base = `client_sub=eq.${encodeURIComponent(payload.sub)}&order=created_at.desc`
+  let rows: any[]
   try {
-    const rows = await sbSelect(
-      creds,
-      'portal_diary',
-      `client_sub=eq.${encodeURIComponent(payload.sub)}&order=created_at.desc&select=id,time_label,title,tag,detail,photo_path,created_at`,
-    )
+    rows = await sbSelect(creds, 'portal_diary', `${base}&select=id,time_label,title,tag,detail,photo_path,created_at,eaten_at`)
+  } catch (err) {
+    // eaten_at-Spalte evtl. noch nicht angelegt → ohne sie laden (Anzeige fällt auf created_at zurück),
+    // damit ein Deploy VOR der SQL das bestehende Tagebuch nicht leert.
+    console.warn('[portal-diary] Select mit eaten_at fehlgeschlagen, Fallback ohne', (err as Error).message)
+    try {
+      rows = await sbSelect(creds, 'portal_diary', `${base}&select=id,time_label,title,tag,detail,photo_path,created_at`)
+    } catch (err2) {
+      console.error('[portal-diary] supabase select failed', err2)
+      return jsonResponse(500, { error: 'Tagebuch konnte nicht geladen werden.' })
+    }
+  }
+  try {
     const entries = await Promise.all(
       rows.map(async (r) => ({
         id: r.id,
@@ -53,12 +63,13 @@ export default async (req: Request, _context: Context) => {
         tag: r.tag,
         detail: r.detail,
         created_at: r.created_at,
+        eaten_at: r.eaten_at ?? null,
         photoUrl: r.photo_path ? await sbSignedUrl(creds, 'diary-photos', r.photo_path).catch(() => null) : null,
       })),
     )
     return jsonResponse(200, { ok: true, configured: true, entries })
   } catch (err) {
-    console.error('[portal-diary] supabase select failed', err)
+    console.error('[portal-diary] signed url failed', err)
     return jsonResponse(500, { error: 'Tagebuch konnte nicht geladen werden.' })
   }
 }
