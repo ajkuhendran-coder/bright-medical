@@ -183,6 +183,16 @@ function LockNote({ children }: { children: ReactNode }) {
     </div>
   )
 }
+// Lade-Platzhalter (Skeleton) — verhindert das „leer → Inhalt springt rein"-Flackern.
+function SkeletonCards({ n = 3 }: { n?: number }) {
+  return (
+    <div style={{ padding: '4px 0 0' }} aria-hidden="true">
+      {Array.from({ length: n }).map((_, i) => (
+        <div key={i} className="mp-skel" style={{ height: 66, borderRadius: 14, marginBottom: 10 }} />
+      ))}
+    </div>
+  )
+}
 
 // Plan-Datum menschlich (Europe/Berlin).
 function formatPlanDate(iso: string): string {
@@ -393,7 +403,14 @@ export default function MeinProgramm() {
     const v = new URL(window.location.href).searchParams.get('view')
     return (['tagebuch', 'plan', 'kontakt'] as Tab[]).includes(v as Tab) ? (v as Tab) : 'start'
   })
-  const [focusDone, setFocusDone] = useState(false)
+  const [focusDone, setFocusDone] = useState(() => {
+    try { return localStorage.getItem(`mp-focus-${payload?.weekCurrent ?? 0}`) === '1' } catch { return false }
+  })
+  const [lightbox, setLightbox] = useState<string | null>(null)
+  const [loading, setLoading] = useState({ thread: true, diary: true, plan: true })
+  const [seenCoachCount, setSeenCoachCount] = useState(() => {
+    try { return Number(localStorage.getItem('mp-seen-coach') || 0) } catch { return 0 }
+  })
   const [draft, setDraft] = useState('')
   const [sent, setSent] = useState(false)
   // Thread + Tagebuch kommen aus Supabase (EU) über portal-thread / portal-diary.
@@ -402,6 +419,7 @@ export default function MeinProgramm() {
   const [entries, setEntries] = useState<Entry[]>([])
   const [plan, setPlan] = useState<PlanData | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const threadEndRef = useRef<HTMLDivElement>(null)
   const [noteOpen, setNoteOpen] = useState(false)
   const [noteText, setNoteText] = useState('')
   const [noteTag, setNoteTag] = useState('Notiz')
@@ -436,13 +454,8 @@ export default function MeinProgramm() {
       document.head.appendChild(m)
     }
     m.setAttribute('content', 'noindex,nofollow')
-    if (!document.getElementById('mp-fonts')) {
-      const l = document.createElement('link')
-      l.id = 'mp-fonts'
-      l.rel = 'stylesheet'
-      l.href = 'https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Hanken+Grotesk:wght@400;500;600;700&display=swap'
-      document.head.appendChild(l)
-    }
+    // Fonts (Newsreader + Hanken Grotesk) werden lokal via @font-face in index.css
+    // geladen — kein externer Google-Fonts-Aufruf (DSGVO auf der Gesundheitsdaten-Seite).
     ensurePortalPwa()
   }, [])
 
@@ -465,6 +478,7 @@ export default function MeinProgramm() {
         setThread(data.messages as ThreadMsg[])
       }
     } catch { /* Preview/offline → Demo-Thread behalten */ }
+    finally { setLoading((l) => (l.thread ? { ...l, thread: false } : l)) }
   }, [token])
 
   const loadDiary = useCallback(async () => {
@@ -480,6 +494,7 @@ export default function MeinProgramm() {
         setEntries(toInterleaved(data.entries as ServerEntry[]))
       }
     } catch { /* Preview/offline → Demo-Einträge behalten */ }
+    finally { setLoading((l) => (l.diary ? { ...l, diary: false } : l)) }
   }, [token])
 
   const loadPlan = useCallback(async () => {
@@ -492,11 +507,44 @@ export default function MeinProgramm() {
       const data = await res.json()
       if (data?.configured && data.plan) setPlan(data.plan as PlanData)
     } catch { /* offline → kein Plan, Platzhalter bleibt */ }
+    finally { setLoading((l) => (l.plan ? { ...l, plan: false } : l)) }
   }, [token])
 
   useEffect(() => { void loadThread() }, [loadThread])
   useEffect(() => { void loadDiary() }, [loadDiary])
   useEffect(() => { void loadPlan() }, [loadPlan])
+
+  // Beim Zurückkehren in die App (Tab/PWA wieder im Vordergrund) frisch laden:
+  // sonst zeigt die installierte App tagelang alte Nachrichten/Pläne, und die
+  // signierten Foto-/Audio-URLs (1 h gültig) wären längst abgelaufen.
+  useEffect(() => {
+    if (!token) return
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return
+      void loadThread()
+      void loadDiary()
+      void loadPlan()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [token, loadThread, loadDiary, loadPlan])
+
+  // Chat: bei Öffnen des Kontakt-Tabs + bei neuer Nachricht ans Ende springen
+  // (bei langem Verlauf sonst mühsames Scrollen zum Neuesten).
+  useEffect(() => {
+    if (tab === 'kontakt') threadEndRef.current?.scrollIntoView({ block: 'end' })
+  }, [tab, thread.length])
+
+  // Ungelesen-Markierung am Kontakt-Tab (rein clientseitig via localStorage, kein Schema/CC):
+  // „gesehen" = Anzahl Coach-Nachrichten beim letzten Öffnen des Kontakt-Tabs.
+  const coachCount = thread.filter((m) => m.from === 'coach').length
+  const hasUnread = coachCount > seenCoachCount && tab !== 'kontakt'
+  useEffect(() => {
+    if (tab === 'kontakt' && coachCount !== seenCoachCount) {
+      setSeenCoachCount(coachCount)
+      try { localStorage.setItem('mp-seen-coach', String(coachCount)) } catch { /* ignore */ }
+    }
+  }, [tab, coachCount, seenCoachCount])
 
   // --- Push-Benachrichtigung (freiwillig, nur nach Consent) ---
   const savePush = useCallback(async (sub: PushSubscription) => {
@@ -603,9 +651,10 @@ export default function MeinProgramm() {
     const files = Array.from(e.target.files ?? []).filter((f) => f.type.startsWith('image/'))
     e.target.value = ''
     setWriteError('')
+    let failed = 0
     for (const f of files) {
       let dataUrl: string
-      try { dataUrl = await compressImage(f) } catch { continue }
+      try { dataUrl = await compressImage(f) } catch { failed++; continue }
       const time = nowTime()
       // optimistisch anzeigen
       setEntries((prev) => prependToday(prev, { kind: 'entry', time, title: 'Mahlzeit-Foto', tag: 'Foto', detail: '', photo: dataUrl }))
@@ -620,6 +669,11 @@ export default function MeinProgramm() {
         if (!res.ok) setWriteError('Foto konnte nicht gespeichert werden. Bitte erneut versuchen.')
         void loadDiary()
       } catch { /* offline → lokale Vorschau behalten */ }
+    }
+    if (failed > 0) {
+      setWriteError(failed === 1
+        ? 'Ein Foto konnte nicht gelesen werden. Bitte versuchen Sie es mit einem anderen Bild.'
+        : `${failed} Fotos konnten nicht gelesen werden. Bitte erneut versuchen.`)
     }
   }
 
@@ -716,6 +770,9 @@ export default function MeinProgramm() {
   const focusText = payload.focusText || 'Ihr Coach hinterlegt hier jede Woche Ihren Fokus. Es geht gleich los.'
   const focusStep = payload.focusStep || 'Wir starten gemeinsam im ersten Gespräch.'
 
+  // Programm abgeschlossen: Dr. K sendet einen finalen Portal-Link mit weekCurrent > weekTotal
+  // (z. B. „5 von 4"). Dann zeigt der Start-Tab statt Fortschritt/Fokus einen würdigen Abschluss.
+  const abgeschlossen = payload.weekCurrent > payload.weekTotal
   const navColor = (t: Tab) => (tab === t ? INK : OFF)
   const navWeight = (t: Tab) => (tab === t ? 600 : 500)
 
@@ -775,6 +832,24 @@ export default function MeinProgramm() {
                 </div>
               )}
 
+              {abgeschlossen && (
+                <div className="mp-card" style={{ margin: '18px 26px 0', padding: '26px 22px', textAlign: 'center' }}>
+                  <div style={{ width: 52, height: 52, borderRadius: 15, background: '#E8F5EE', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: OK, marginBottom: 14 }}>
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
+                  </div>
+                  <div style={{ ...serif, fontSize: 24, color: INK, marginBottom: 10 }}>Geschafft, {payload.name}!</div>
+                  <div style={{ fontSize: 15, lineHeight: 1.6, color: '#4A6071', maxWidth: 320, margin: '0 auto' }}>
+                    Sie haben Ihren {payload.programLabel} abgeschlossen. Schön, dass Sie diesen Weg gegangen sind und drangeblieben sind.
+                  </div>
+                  <div style={{ height: 1, background: '#EDF1F5', margin: '20px 0 16px' }} />
+                  <div style={{ fontSize: 14, lineHeight: 1.6, color: '#4A6071', textAlign: 'left' }}>
+                    <div style={{ marginBottom: 10 }}><strong style={{ color: INK }}>Ihre Unterlagen bleiben bei Ihnen.</strong> Ihren persönlichen Plan können Sie im Tab „Plan" jederzeit als PDF speichern; Ihr Tagebuch bleibt hier für Sie sichtbar.</div>
+                    <div><strong style={{ color: INK }}>Sie möchten weitermachen?</strong> Schreiben Sie mir unten kurz, dann finden wir gemeinsam den passenden nächsten Schritt.</div>
+                  </div>
+                </div>
+              )}
+
+              {!abgeschlossen && (<>
               {/* Fortschritt */}
               <div style={{ padding: '18px 26px 4px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 9 }}>
@@ -797,7 +872,7 @@ export default function MeinProgramm() {
                 <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.1em', color: MUT, textTransform: 'uppercase', marginBottom: 6 }}>Ihr nächster Schritt</div>
                 <div style={{ fontSize: 15, lineHeight: 1.5, color: INK, fontWeight: 500 }}>{focusStep}</div>
                 <button
-                  onClick={() => setFocusDone((v) => !v)}
+                  onClick={() => setFocusDone((v) => { const nv = !v; try { localStorage.setItem(`mp-focus-${payload?.weekCurrent ?? 0}`, nv ? '1' : '0') } catch { /* ignore */ } return nv })}
                   style={{ marginTop: 16, width: '100%', fontFamily: 'inherit', fontSize: 15, fontWeight: 600, padding: 14, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, cursor: 'pointer', border: `1.5px solid ${focusDone ? OK : 'transparent'}`, background: focusDone ? '#E8F5EE' : INK, color: focusDone ? OK : '#fff' }}
                 >
                   <span style={{ width: 20, height: 20, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: focusDone ? OK : 'rgba(255,255,255,.18)', color: '#fff' }}>
@@ -839,6 +914,7 @@ export default function MeinProgramm() {
                   <CamIcon /> Zum Video-Gespräch
                 </a>
               </div>
+              </>)}
 
               {/* Plan-Zeile */}
               <button onClick={() => setTab('plan')} style={{ margin: '14px 26px 0', width: 'calc(100% - 52px)', textAlign: 'left', padding: '18px 22px', background: '#fff', border: `1px solid ${LINE}`, borderRadius: 18, display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', fontFamily: 'inherit' }}>
@@ -933,19 +1009,20 @@ export default function MeinProgramm() {
                     <div key={i} style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.12em', color: '#8295A2', textTransform: 'uppercase', margin: '18px 0 10px' }}>{e.label}</div>
                   ) : (
                     <div key={i} style={{ display: 'flex', gap: 12, background: '#fff', border: `1px solid ${LINE}`, borderRadius: 14, padding: '14px 16px', marginBottom: 10 }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: OFF, width: 44, flex: 'none', paddingTop: 1 }}>{e.time}</div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: MUT, width: 44, flex: 'none', paddingTop: 1 }}>{e.time}</div>
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <span style={{ fontSize: 15, fontWeight: 600, color: INK }}>{e.title}</span>
                           <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 8px', borderRadius: 20, background: (TAG_COLORS[e.tag] || TAG_COLORS.Notiz)[0], color: (TAG_COLORS[e.tag] || TAG_COLORS.Notiz)[1] }}>{e.tag}</span>
                         </div>
                         {e.detail && <div style={{ fontSize: 13, color: MUT, lineHeight: 1.45, marginTop: 3 }}>{e.detail}</div>}
-                        {e.photo && <img src={e.photo} alt="Tagebuch-Foto" style={{ display: 'block', width: '100%', maxHeight: 190, objectFit: 'cover', borderRadius: 10, marginTop: 9 }} />}
+                        {e.photo && <img src={e.photo} alt="Tagebuch-Foto" onClick={() => setLightbox(e.photo!)} style={{ display: 'block', width: '100%', maxHeight: 190, objectFit: 'cover', borderRadius: 10, marginTop: 9, cursor: 'zoom-in' }} />}
                       </div>
                     </div>
                   )
                 )}
-                {entries.length === 0 && (
+                {loading.diary && entries.length === 0 && <SkeletonCards n={3} />}
+                {!loading.diary && entries.length === 0 && (
                   <div style={{ padding: '34px 6px', textAlign: 'center', color: MUT, fontSize: 14, lineHeight: 1.6 }}>
                     Noch keine Einträge.<br />Halten Sie Ihre erste Mahlzeit mit „Foto" oder „Eintrag" fest.
                   </div>
@@ -1029,7 +1106,8 @@ export default function MeinProgramm() {
               )}
 
               <div style={{ padding: '20px 26px 8px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {thread.length === 0 && (
+                {loading.thread && thread.length === 0 && <SkeletonCards n={2} />}
+                {!loading.thread && thread.length === 0 && (
                   <div style={{ padding: '26px 6px', textAlign: 'center', fontSize: 14, lineHeight: 1.6, color: MUT }}>
                     Noch keine Nachrichten. Schreiben Sie Ajanth gern — er meldet sich.
                   </div>
@@ -1046,6 +1124,7 @@ export default function MeinProgramm() {
                     </div>
                   )
                 })}
+                <div ref={threadEndRef} />
               </div>
 
               <div style={{ margin: '18px 26px 0', padding: '14px 16px', background: '#F2F8FA', border: '1px solid #DCEEF3', borderRadius: 14, display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -1081,7 +1160,7 @@ export default function MeinProgramm() {
         )}
 
         {/* ===== TAB-LEISTE ===== */}
-        <div style={{ flex: 'none', borderTop: `1px solid ${LINE}`, background: '#fff', display: 'flex', padding: '11px 14px calc(env(safe-area-inset-bottom) + 14px)' }}>
+        <div style={{ flex: 'none', borderTop: `1px solid ${LINE}`, background: '#fff', boxShadow: '0 -1px 12px rgba(20,49,77,0.06)', display: 'flex', padding: '11px 14px calc(env(safe-area-inset-bottom) + 14px)' }}>
           <button className="mp-tab" onClick={() => setTab('start')} style={{ color: navColor('start') }}>
             <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
             <span style={{ fontSize: 10.5, fontWeight: navWeight('start') }}>Start</span>
@@ -1094,12 +1173,19 @@ export default function MeinProgramm() {
             <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
             <span style={{ fontSize: 10.5, fontWeight: navWeight('plan') }}>Plan</span>
           </button>
-          <button className="mp-tab" onClick={() => setTab('kontakt')} style={{ color: navColor('kontakt') }}>
+          <button className="mp-tab" onClick={() => setTab('kontakt')} style={{ color: navColor('kontakt'), position: 'relative' }}>
             <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z" /></svg>
             <span style={{ fontSize: 10.5, fontWeight: navWeight('kontakt') }}>Kontakt</span>
+            {hasUnread && <span aria-label="neue Nachricht" style={{ position: 'absolute', top: 2, left: 'calc(50% + 7px)', width: 8, height: 8, borderRadius: '50%', background: '#E5484D', border: '1.5px solid #fff' }} />}
           </button>
         </div>
       </div>
+      {lightbox && (
+        <div onClick={() => setLightbox(null)} style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(10,20,32,0.92)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, cursor: 'zoom-out' }}>
+          <img src={lightbox} alt="Foto in Großansicht" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 12 }} />
+          <button onClick={(ev) => { ev.stopPropagation(); setLightbox(null) }} aria-label="Schließen" style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top) + 14px)', right: 16, width: 42, height: 42, borderRadius: '50%', border: 'none', background: 'rgba(255,255,255,0.16)', color: '#fff', fontSize: 24, lineHeight: 1, cursor: 'pointer' }}>×</button>
+        </div>
+      )}
       <PortalStyles />
     </div>
   )
@@ -1114,6 +1200,9 @@ function PortalStyles() {
 .mp-card{background:#fff;border:1px solid #E7EDF2;border-radius:18px;}
 .mp-scroll::-webkit-scrollbar{width:0;height:0;}
 .mp-scroll{scrollbar-width:none;}
+.mp-skel{background:linear-gradient(90deg,#EEF2F6 0%,#F6F9FB 50%,#EEF2F6 100%);background-size:200% 100%;animation:mp-shimmer 1.4s ease-in-out infinite;}
+@keyframes mp-shimmer{0%{background-position:200% 0;}100%{background-position:-200% 0;}}
+@media (prefers-reduced-motion: reduce){.mp-app,.mp-app *{animation:none !important;}}
 .mp-page ::placeholder{color:#9FB0BC;opacity:1;}
 .mp-tab{flex:1;background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;font-family:inherit;}
 @keyframes mp-rise{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
