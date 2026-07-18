@@ -897,7 +897,7 @@ export default function MeinProgramm() {
                     Eintrag
                   </button>
                 </div>
-                <input ref={fileRef} type="file" accept="image/*" capture="environment" multiple onChange={onPickPhoto} hidden />
+                <input ref={fileRef} type="file" accept="image/*" multiple onChange={onPickPhoto} hidden />
               </div>
 
               {noteOpen && (
