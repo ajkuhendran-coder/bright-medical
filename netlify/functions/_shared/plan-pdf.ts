@@ -5,16 +5,17 @@
 //
 // Datenquelle bleibt unser `sections`-Modell (heading·text·list·meal·training·note).
 // Reichere Darstellung wird abgeleitet + über optionale Felder gesteuert (abwärtskompatibel):
-//   list.variant: 'cards' | 'checks' | 'plain'   (sonst aus Überschrifts-Kontext abgeleitet)
+//   list.variant: 'cards' | 'stepper' | 'checklist'('checks'=Alias) | 'plain'   (sonst aus Kontext abgeleitet)
+//   list.variant 'stepper' → nummerierter Ablauf (Dots+Linie) + danach das Teller-Foto
 //   meal.plate:   true  → Teller-Portionsmodell-Foto statt Liste
-//   training-Titel „… (2×/Woche)" → Badge-Pill
+//   training.badge (oder „… (2×/Woche)" im Titel) → Badge-Pill
 //   **fett** im Text/Items → Hervorhebung
 //   note MIT title → Getränke-Callout · note OHNE title → Schluss-Zitat + Signatur
 
 import { PDFDocument, rgb, type PDFFont, type PDFImage, type PDFPage, type RGB } from 'pdf-lib'
 import fontkit from '@pdf-lib/fontkit'
 
-export type PlanSection = { type: string; title?: string; body?: string; items?: string[]; variant?: string; plate?: boolean }
+export type PlanSection = { type: string; title?: string; body?: string; items?: string[]; variant?: string; plate?: boolean; badge?: string }
 export type PlanForPdf = {
   title: string
   intro?: string | null
@@ -241,6 +242,36 @@ export async function buildPlanPdf(plan: PlanForPdf, opts: BuildPlanPdfOpts): Pr
     page.drawRectangle({ x, y: y - h, width: w, height: h, borderColor: C.hair, borderWidth: 1 })
     y -= h + 4
   }
+  // Nummerierter Ablauf: Dots (34px, INK, weiße Serif-Zahl) + Verbindungslinie; danach das Teller-Foto.
+  // Spiegelt den Portal-Renderer (variant:'stepper'); paginiert pro Schritt.
+  const STEP_DOT = 34, STEP_GAP = 14, STEP_SIZE = 14.5, STEP_LH = 21
+  const stepTextX = MX + STEP_DOT + 14, stepTextMaxW = MX + CW - stepTextX
+  const stepperBlockHeight = (items: string[]) => {
+    let h = 12
+    items.forEach((it, i) => { h += Math.max(STEP_DOT, richLines(it, stepTextMaxW, STEP_SIZE) * STEP_LH) + (i < items.length - 1 ? STEP_GAP : 0) })
+    if (plate) h += 14 + plateDims().h + 4
+    return h
+  }
+  const stepper = (items: string[]) => {
+    y -= 12
+    const r = STEP_DOT / 2, white = rgb(1, 1, 1)
+    items.forEach((it, i) => {
+      const { lines, sp } = layout(it, stepTextMaxW, STEP_SIZE, sans, sansS)
+      const contentH = Math.max(STEP_DOT, lines.length * STEP_LH)
+      const isLast = i === items.length - 1
+      const stepH = contentH + (isLast ? 0 : STEP_GAP)
+      if (y - stepH < MIN_Y) newPage()
+      const top = y, dotCX = MX + r, dotCY = top - r
+      if (!isLast) page.drawRectangle({ x: dotCX - 1, y: top - stepH, width: 2, height: stepH - STEP_DOT, color: C.cardHair })
+      page.drawCircle({ x: dotCX, y: dotCY, size: r, color: C.ink })
+      const num = String(i + 1)
+      T(num, dotCX - serif.widthOfTextAtSize(num, 17) / 2, dotCY - 6, 17, serif, white)
+      let ty = top
+      for (const ln of lines) { drawLine(ln, stepTextX, ty - STEP_SIZE, STEP_SIZE, sans, sansS, C.body, C.ink, sp); ty -= STEP_LH }
+      y = top - stepH
+    })
+    plateFig()
+  }
   const badge = (text: string, atX: number, baseY: number) => {
     const size = 10.5, padX = 10, h = 18
     const bw = wText(text, size, sansS) + padX * 2
@@ -260,16 +291,20 @@ export async function buildPlanPdf(plan: PlanForPdf, opts: BuildPlanPdfOpts): Pr
     rich(body, { x: MX + pad + kickW, size, color: C.calloutText, lh, maxW: availW })
     y = top - h - 4
   }
-  const closing = (body: string) => {
+  // Kursiv-Callout mit linkem Akzent-Balken. Nur die LETZTE titellose Note trägt die Signatur
+  // (withSig); frühere headerlose Notes sind reine Callouts (mehrere Callouts, eine Signatur).
+  const closing = (body: string, withSig = true) => {
     y -= 24
     const size = 17, lh = 25, pad = 22
-    const need = richLines(body, CW - pad, size, serifI, serifI) * lh + 18 + 20 + SIGNATURE.lines.length * 18
+    const need = richLines(body, CW - pad, size, serifI, serifI) * lh + (withSig ? 18 + 20 + SIGNATURE.lines.length * 18 : 0)
     if (y - need < MIN_Y) newPage()
     const top = y
     rich(body, { x: MX + pad, size, color: C.quote, lh, reg: serifI, bold: serifI, boldColor: C.quote, maxW: CW - pad })
-    y -= 16
-    T(SIGNATURE.name, MX + pad, y - 14, 14, sansB, C.ink); y -= 20
-    for (const ln of SIGNATURE.lines) { T(ln, MX + pad, y - 12.5, 12.5, sans, C.sub); y -= 18 }
+    if (withSig) {
+      y -= 16
+      T(SIGNATURE.name, MX + pad, y - 14, 14, sansB, C.ink); y -= 20
+      for (const ln of SIGNATURE.lines) { T(ln, MX + pad, y - 12.5, 12.5, sans, C.sub); y -= 18 }
+    }
     page.drawRectangle({ x: MX, y: y + 4, width: 3, height: top - (y + 4), color: C.acc })
     y -= 2
   }
@@ -287,6 +322,9 @@ export async function buildPlanPdf(plan: PlanForPdf, opts: BuildPlanPdfOpts): Pr
   }
 
   const secs = Array.isArray(plan.sections) ? plan.sections : []
+  // Index der letzten titellosen Note = die einzige, die die Signatur trägt.
+  let lastPlainNoteIdx = -1
+  secs.forEach((s, k) => { if (s?.type === 'note' && !(s.title && s.title.trim())) lastPlainNoteIdx = k })
   let headingKind: 'guard' | 'success' | 'other' = 'other'
   let firstListSeen = false
   for (let idx = 0; idx < secs.length; idx++) {
@@ -300,8 +338,10 @@ export async function buildPlanPdf(plan: PlanForPdf, opts: BuildPlanPdfOpts): Pr
         if (next) {
           const nItems = Array.isArray(next.items) ? next.items.filter((x) => typeof x === 'string' && x.trim()) : []
           if (next.type === 'list') {
-            const asCards = headingKind === 'guard' && nItems.length >= 2 && nItems.length <= 3
-            if (asCards) { const nc = Math.min(nItems.length, 3), cw = (CW - 14 * (nc - 1)) / nc; let m = 0; for (const it of nItems.slice(0, nc)) m = Math.max(m, richLines(it, cw - 36, 13.5) * 20); reserve = HEAD + 71 + m }
+            const nv = next.variant === 'checks' ? 'checklist' : next.variant
+            const asCards = (nv === 'cards' || (!nv && headingKind === 'guard')) && nItems.length >= 2 && nItems.length <= 3
+            if (nv === 'stepper') reserve = HEAD + stepperBlockHeight(nItems)
+            else if (asCards) { const nc = Math.min(nItems.length, 3), cw = (CW - 14 * (nc - 1)) / nc; let m = 0; for (const it of nItems.slice(0, nc)) m = Math.max(m, richLines(it, cw - 36, 13.5) * 20); reserve = HEAD + 71 + m }
             else reserve = HEAD + (next.title ? 18 : 0) + itemsHeight(nItems, 14.5, 21, MX + CW - (MX + 20))
           } else if (next.type === 'meal' || next.type === 'training') { const np = next.type === 'meal' && !!next.plate && !!plate; reserve = HEAD + (np ? mtHeight(next, nItems) : Math.min(mtHeight(next, nItems), 132)) }
           else if (next.type === 'note') reserve = HEAD + (next.title ? 64 : 130)
@@ -313,18 +353,21 @@ export async function buildPlanPdf(plan: PlanForPdf, opts: BuildPlanPdfOpts): Pr
         break
       }
       case 'list': {
-        const variant = s.variant || (headingKind === 'guard' || (!firstListSeen && items.length >= 2 && items.length <= 3) ? 'cards' : headingKind === 'success' ? 'checks' : 'plain')
+        let variant = s.variant || (headingKind === 'guard' || (!firstListSeen && items.length >= 2 && items.length <= 3) ? 'cards' : headingKind === 'success' ? 'checklist' : 'plain')
+        if (variant === 'checks') variant = 'checklist' // Alias (CC-Schema)
         firstListSeen = true
         if (variant === 'cards' && items.length >= 2 && items.length <= 3) cards(items)
-        else if (variant === 'checks') checks(items)
+        else if (variant === 'stepper') stepper(items)
+        else if (variant === 'checklist') checks(items)
         else { if (s.title) { y -= 10; if (y - 12 < MIN_Y) newPage(); T(s.title, MX, y - 12, 12, sansS, C.ink); y -= 18 } bullets(items) }
         break
       }
       case 'meal':
       case 'training': {
         const isTraining = s.type === 'training'
-        let title = s.title || (isTraining ? 'Bewegung' : 'Mahlzeit'), badgeText = ''
-        if (isTraining) { const m = title.match(/^(.*?)\s*\(([^)]+)\)\s*$/); if (m) { title = m[1].trim(); badgeText = m[2].trim() } }
+        let title = s.title || (isTraining ? 'Bewegung' : 'Mahlzeit')
+        let badgeText = isTraining && typeof s.badge === 'string' ? s.badge.trim() : ''
+        if (isTraining && !badgeText) { const m = title.match(/^(.*?)\s*\(([^)]+)\)\s*$/); if (m) { title = m[1].trim(); badgeText = m[2].trim() } }
         const showPlate = !isTraining && !!s.plate && !!plate
         const subH = s.body && s.body.trim() && !showPlate ? richLines(s.body, CW, 15.5, serifI, serifI) * 22 + 4 : 0
         const blockH = mtHeight(s, items)
@@ -342,7 +385,7 @@ export async function buildPlanPdf(plan: PlanForPdf, opts: BuildPlanPdfOpts): Pr
       }
       case 'note': {
         if (s.title && s.title.trim()) callout(s.title, s.body || '')
-        else closing(s.body || '')
+        else closing(s.body || '', idx === lastPlainNoteIdx)
         break
       }
       case 'text':
