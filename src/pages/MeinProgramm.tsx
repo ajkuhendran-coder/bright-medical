@@ -45,7 +45,7 @@ type Entry =
   | { kind: 'entry'; time: string; title: string; tag: string; detail: string; photo?: string }
 
 // Plan-Bausteine (festes Vokabular, kommen als JSONB aus portal_plans — bewusst lose typisiert).
-type PlanSectionData = { type: string; title?: string; body?: string; items?: string[]; variant?: string; plate?: boolean }
+type PlanSectionData = { type: string; title?: string; body?: string; items?: string[]; variant?: string; plate?: boolean; badge?: string }
 type PlanData = { title: string; intro: string | null; sections: PlanSectionData[]; version: number; updatedAt: string }
 // LIVE Start-Inhalte (server-getrieben aus portal_state; überschreiben die Token-Werte, sonst Fallback).
 type PortalState = {
@@ -272,39 +272,72 @@ function PlanBody({ sections }: { sections: PlanSectionData[] }) {
   let headingKind: 'guard' | 'success' | 'other' = 'other'
   let firstList = false
   const out: ReactNode[] = []
+  // Nur die LETZTE titellose Note trägt die Signatur; frühere titellose Notes sind reine
+  // Kursiv-Callouts (ein Plan kann mehrere headerlose Callouts haben, aber nur eine Signatur).
+  let lastPlainNoteIdx = -1
+  sections.forEach((s, k) => { if (s.type === 'note' && !(s.title && s.title.trim())) lastPlainNoteIdx = k })
   sections.forEach((s, i) => {
     const items = Array.isArray(s.items) ? s.items.filter((x) => typeof x === 'string' && x.trim()) : []
     if (s.type === 'heading') {
       headingKind = guardRe.test(s.title || '') ? 'guard' : successRe.test(s.title || '') ? 'success' : 'other'
       out.push(
         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '26px 0 2px' }}>
-          <div style={{ ...serif, fontSize: 21, color: INK, whiteSpace: 'nowrap' }}>{s.title}</div>
+          <div style={{ ...serif, fontSize: 22, color: INK, whiteSpace: 'nowrap' }}>{s.title}</div>
           <div style={{ flex: 1, height: 1, background: LINE }} />
         </div>,
       )
     } else if (s.type === 'list') {
-      const variant = s.variant || (headingKind === 'guard' || (!firstList && items.length >= 2 && items.length <= 3) ? 'cards' : headingKind === 'success' ? 'checks' : 'plain')
+      const auto = headingKind === 'guard' || (!firstList && items.length >= 2 && items.length <= 3) ? 'cards' : headingKind === 'success' ? 'checklist' : 'plain'
+      let variant = s.variant || auto
+      if (variant === 'checks') variant = 'checklist' // Alias (CC-Schema)
       firstList = true
-      if (variant === 'cards' && items.length >= 2 && items.length <= 3) {
+      if (variant === 'cards' && items.length >= 2) {
+        // Nummerierte Karten (Nummer · linker Divider · Text) — spiegelt den Cockpit-Renderer.
         out.push(
-          <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 10, margin: '14px 0 0' }}>
+          <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 12, margin: '14px 0 0' }}>
             {items.map((it, j) => (
-              <div key={j} style={{ display: 'flex', gap: 14, alignItems: 'flex-start', background: '#F7F9FB', border: `1px solid ${LINE}`, borderRadius: 14, padding: '14px 16px' }}>
-                <div style={{ ...serif, fontSize: 30, lineHeight: 1, color: ACC, flex: 'none', width: 36 }}>{String(j + 1).padStart(2, '0')}</div>
-                <div style={{ fontSize: 14, lineHeight: 1.55, color: '#40566A', paddingTop: 4 }}><RichText text={it} /></div>
+              <div key={j} style={{ display: 'flex', gap: 16, alignItems: 'stretch', background: '#F7F9FB', border: `1px solid ${LINE}`, borderRadius: 14, padding: '18px' }}>
+                <div style={{ ...serif, fontSize: 34, lineHeight: 1, color: ACC, flex: 'none', width: 34, textAlign: 'center' }}>{j + 1}</div>
+                <div style={{ borderLeft: '1px solid #E2EAEF', paddingLeft: 16, fontSize: 13.5, lineHeight: 1.55, color: '#40566A' }}><RichText text={it} /></div>
               </div>
             ))}
           </div>,
         )
-      } else if (variant === 'checks') {
+      } else if (variant === 'stepper') {
+        // Nummerierte Schritte mit Verbindungslinie. Der Teller (Portionsmodell) hängt am
+        // stepper (CC-Design); im schmalen Portal-Frame steht er UNTER den Schritten statt
+        // rechts daneben (dort greift kein Desktop-Breakpoint). Dr.-K-Wahl: echtes Foto.
         out.push(
-          <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 11, margin: '12px 0 0' }}>
+          <div key={i} style={{ margin: '14px 0 0' }}>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {items.map((it, j) => {
+                const last = j === items.length - 1
+                return (
+                  <div key={j} style={{ display: 'flex', gap: 14 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 'none' }}>
+                      <div style={{ width: 34, height: 34, borderRadius: '50%', background: INK, color: '#fff', ...serif, fontSize: 17, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>{j + 1}</div>
+                      {!last && <div style={{ width: 2, flex: 1, minHeight: 14, background: 'linear-gradient(#CDE0E9,#EAF1F5)' }} />}
+                    </div>
+                    <div style={{ padding: last ? '5px 0 0' : '5px 0 20px', fontSize: 14.5, color: '#40566A', lineHeight: 1.5 }}><RichText text={it} /></div>
+                  </div>
+                )
+              })}
+            </div>
+            {s.plate !== false && (
+              <img src="/images/teller-portionsmodell.jpg" alt="Der Teller · Portionsmodell — die Hälfte Gemüse, ein Viertel Eiweiß, ein Viertel Beilage" style={{ width: '100%', maxWidth: 320, borderRadius: 14, border: `1px solid ${LINE}`, display: 'block', margin: '18px auto 0' }} />
+            )}
+          </div>,
+        )
+      } else if (variant === 'checklist') {
+        // Häkchen-Liste (im schmalen Portal-Frame einspaltig; im breiten Cockpit 2-spaltig).
+        out.push(
+          <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 12, margin: '12px 0 0' }}>
             {items.map((it, j) => (
               <div key={j} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                <span style={{ flex: 'none', width: 24, height: 24, borderRadius: '50%', background: '#EAF6F9', border: '1px solid #CDE9F0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: ACC_DK, marginTop: 1 }}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                <span style={{ flex: 'none', width: 26, height: 26, borderRadius: '50%', background: '#EAF6F9', border: '1px solid #CDE9F0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: ACC_DK, marginTop: 1 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                 </span>
-                <span style={{ fontSize: 14.5, lineHeight: 1.55, color: '#40566A' }}><RichText text={it} /></span>
+                <span style={{ fontSize: 15, lineHeight: 1.45, color: '#40566A', paddingTop: 2 }}><RichText text={it} /></span>
               </div>
             ))}
           </div>,
@@ -334,14 +367,14 @@ function PlanBody({ sections }: { sections: PlanSectionData[] }) {
       )
     } else if (s.type === 'training') {
       let title = s.title || 'Bewegung'
-      let badge = ''
-      const m = title.match(/^(.*?)\s*\(([^)]+)\)\s*$/)
-      if (m) { title = m[1].trim(); badge = m[2].trim() }
+      // Badge bevorzugt aus eigenem Feld (CC-Schema); Fallback: „(…)" aus dem Titel parsen.
+      let badge = typeof s.badge === 'string' ? s.badge.trim() : ''
+      if (!badge) { const m = title.match(/^(.*?)\s*\(([^)]+)\)\s*$/); if (m) { title = m[1].trim(); badge = m[2].trim() } }
       out.push(
         <div key={i}>
           <Kicker label="Bewegung" />
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', margin: '0 0 2px' }}>
-            <span style={{ ...serif, fontSize: 22, color: INK }}>{title}</span>
+            <span style={{ ...serif, fontSize: 24, color: INK }}>{title}</span>
             {badge && <span style={{ fontSize: 11, fontWeight: 600, color: ACC_DK, background: '#EAF6F9', border: '1px solid #CDE9F0', padding: '3px 10px', borderRadius: 20 }}>{badge}</span>}
           </div>
           {s.body && <div style={{ ...serifI, fontSize: 15, color: MUT, margin: '4px 0 10px' }}>{s.body}</div>}
@@ -358,12 +391,14 @@ function PlanBody({ sections }: { sections: PlanSectionData[] }) {
         )
       } else {
         out.push(
-          <div key={i} style={{ margin: '24px 0 0', borderLeft: `3px solid ${ACC}`, padding: '2px 0 2px 18px' }}>
-            <div style={{ ...serifI, fontSize: 16, lineHeight: 1.6, color: '#2C4256' }}>{s.body}</div>
-            <div style={{ marginTop: 14 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: INK }}>{PLAN_SIG.name}</div>
-              {PLAN_SIG.lines.map((ln, j) => <div key={j} style={{ fontSize: 12.5, color: MUT, lineHeight: 1.5 }}>{ln}</div>)}
-            </div>
+          <div key={i} style={{ margin: '24px 0 0', borderLeft: `3px solid ${ACC}`, padding: '2px 0 2px 16px' }}>
+            <div style={{ ...serifI, fontSize: 16.5, lineHeight: 1.5, color: '#2C4256' }}>{s.body}</div>
+            {i === lastPlainNoteIdx && (
+              <div style={{ marginTop: 14 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: INK }}>{PLAN_SIG.name}</div>
+                {PLAN_SIG.lines.map((ln, j) => <div key={j} style={{ fontSize: 12.5, color: MUT, lineHeight: 1.5 }}>{ln}</div>)}
+              </div>
+            )}
           </div>,
         )
       }
