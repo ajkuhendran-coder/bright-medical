@@ -1,6 +1,6 @@
 // cc-upsert-plan — Command Center veröffentlicht/aktualisiert den Plan EINER Klientin (Portal Plan-Tab).
 // Method: POST · Auth: Authorization: Bearer <CC_API_SECRET> (wie cc-coach-reply — CCs Schreibweg zu BM)
-// Body: { email, title?, intro?, sections: [{type,title?,body?,items?[]}], subjectId? }
+// Body: { email, title?, intro?, sections: [{type,title?,body?,items?[],variant?,plate?,badge?}], subjectId? }
 // Upsert auf client_sub (EIN aktueller Plan pro Klientin); version++ bei Update.
 // Human-in-the-loop: der eigentliche Freigabe-Klick ("Veröffentlichen") passiert IM Cockpit
 // nach der Vorschau; diese Function ist der Schreibpfad nach erfolgter Freigabe.
@@ -30,7 +30,7 @@ function safeEqual(a: string, b: string): boolean {
 }
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-type Section = { type: string; title?: string; body?: string; items?: string[]; variant?: string; plate?: boolean }
+type Section = { type: string; title?: string; body?: string; items?: string[]; variant?: string; plate?: boolean; badge?: string }
 // Baustein-Array säubern + validieren (festes Vokabular, kein Frei-HTML). null = ungültig.
 function sanitizeSections(input: unknown): Section[] | null {
   if (!Array.isArray(input) || input.length === 0 || input.length > 60) return null
@@ -40,16 +40,18 @@ function sanitizeSections(input: unknown): Section[] | null {
     const type = (raw as any).type
     if (typeof type !== 'string' || !ALLOWED_TYPES.has(type)) return null
     const sec: Section = { type }
-    const { title, body, items, variant, plate } = raw as any
+    const { title, body, items, variant, plate, badge } = raw as any
     if (title != null) { if (typeof title !== 'string') return null; sec.title = title.slice(0, 200) }
     if (body != null) { if (typeof body !== 'string') return null; sec.body = body.slice(0, 2000) }
     if (items != null) {
       if (!Array.isArray(items)) return null
       sec.items = items.filter((x) => typeof x === 'string').slice(0, 40).map((x: string) => x.slice(0, 300))
     }
-    // optionale Design-Hinweise (abwärtskompatibel): Karten/Häkchen-Variante + Teller-Foto
-    if (typeof variant === 'string' && ['cards', 'checks', 'plain'].includes(variant)) sec.variant = variant
+    // optionale Design-Hinweise (abwärtskompatibel): Layout-Variante + Teller-Foto + Trainings-Badge.
+    // WICHTIG: 'stepper'/'checklist' müssen mit durch, sonst verliert der gespeicherte Plan Stepper+Teller.
+    if (typeof variant === 'string' && ['cards', 'stepper', 'checklist', 'checks', 'plain'].includes(variant)) sec.variant = variant
     if (plate === true) sec.plate = true
+    if (typeof badge === 'string' && badge.trim()) sec.badge = badge.trim().slice(0, 80)
     out.push(sec)
   }
   return out
