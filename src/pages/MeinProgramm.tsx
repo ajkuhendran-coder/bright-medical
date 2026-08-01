@@ -241,6 +241,26 @@ function RichText({ text, boldColor = INK }: { text?: string; boldColor?: string
   return <>{parts.map((p, i) => (i % 2 === 1 ? <strong key={i} style={{ fontWeight: 600, color: boldColor }}>{p}</strong> : <span key={i}>{p}</span>))}</>
 }
 
+// Nachrichten-Text (Plain-Text-Konvention, KEIN HTML-Modus — bewusst, wg. Injection-Fläche
+// im Gesundheitsportal). Absätze/Umbrüche bleiben erhalten (pre-wrap), **fett** wird hervorgehoben,
+// Zeilen mit "- "/"• " werden zur Aufzählung. Spiegelt die Cockpit-Ansicht (fett erbt die Blasenfarbe).
+function MessageBody({ text }: { text?: string }) {
+  const lines = String(text ?? '').split('\n')
+  const out: ReactNode[] = []
+  let para: string[] = []
+  let bullets: string[] = []
+  const flushPara = () => { if (para.length) { out.push(<div key={out.length} style={{ whiteSpace: 'pre-wrap' }}><RichText text={para.join('\n')} boldColor="inherit" /></div>); para = [] } }
+  // listStyle explizit: Tailwind-Preflight setzt sonst `list-style:none` → Marker fehlen.
+  const flushBullets = () => { if (bullets.length) { out.push(<ul key={out.length} style={{ margin: '3px 0', paddingLeft: 20, listStyleType: 'disc', listStylePosition: 'outside' }}>{bullets.map((b, j) => <li key={j} style={{ margin: '1px 0' }}><RichText text={b} boldColor="inherit" /></li>)}</ul>); bullets = [] } }
+  for (const ln of lines) {
+    const m = ln.match(/^\s*[-•]\s+(.*)$/)
+    if (m) { flushPara(); bullets.push(m[1]) }
+    else { flushBullets(); para.push(ln) }
+  }
+  flushPara(); flushBullets()
+  return <>{out}</>
+}
+
 const serifI = { fontFamily: "'Newsreader', Georgia, serif", fontStyle: 'italic', fontWeight: 400 } as const
 const PLAN_SIG = { name: 'Ajanth Kuhendran', lines: ['Facharzt für Allgemeinmedizin', 'Spezialist in funktionelle und integrative Medizin', 'Bright Medical'] }
 
@@ -1251,7 +1271,7 @@ export default function MeinProgramm() {
                   return (
                     <div key={i} style={{ display: 'flex', justifyContent: me ? 'flex-end' : 'flex-start' }}>
                       <div style={{ maxWidth: '80%', padding: '11px 14px 9px', fontSize: 14, lineHeight: 1.45, ...(me ? { background: ACC, color: '#fff', borderRadius: '18px 18px 6px 18px' } : { background: '#fff', color: INK, border: `1px solid ${LINE}`, borderRadius: '18px 18px 18px 6px' }) }}>
-                        {m.audioUrl ? <span style={{ display: 'block', fontSize: 12.5, fontWeight: 600 }}>🎙️ {m.text || 'Sprachnachricht'}</span> : m.text}
+                        {m.audioUrl ? <span style={{ display: 'block', fontSize: 12.5, fontWeight: 600 }}>🎙️ {m.text || 'Sprachnachricht'}</span> : <MessageBody text={m.text} />}
                         {m.audioUrl && <audio controls preload="none" src={m.audioUrl} style={{ display: 'block', width: '100%', marginTop: 8 }} />}
                         <span style={{ display: 'block', marginTop: 4, fontSize: 10, textAlign: 'right', color: me ? 'rgba(255,255,255,.7)' : '#A9B7C1' }}>{m.time}</span>
                       </div>
