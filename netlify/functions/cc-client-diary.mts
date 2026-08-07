@@ -1,7 +1,9 @@
 // cc-client-diary — Command-Center-Lesezugriff auf das Tagebuch EINER Klientin inkl. Foto-Signed-URLs.
 // Method: POST · Auth: Authorization: Bearer <CC_API_SECRET> · Body { email, limit? }
 // Liest portal_diary (service_role, umgeht RLS) + signiert Fotos aus dem privaten Bucket diary-photos.
-// Returns { ok, count, entries: [{ id, time_label, title, tag, detail, photoUrl, created_at }] } (neueste zuerst).
+// Returns { ok, count, entries: [{ id, time_label, title, tag, detail, photoUrl, created_at, eaten_at, meta }] } (neueste zuerst).
+// meta = Trainings-Tagebuch: { kind:'training', muscle?, weightKg?, reps?, sets? } — bei Mahlzeiten/Notizen null.
+// Bei Training steht der Übungsname in `title`, `tag` = 'Bewegung', der Trainings-Zeitpunkt in `eaten_at`.
 //
 // Sicherheit: umgeht RLS und kann JEDE Klientin lesen -> ausschliesslich hinter dem CC_API_SECRET.
 // Foto-Signed-URLs sind kurzlebig (1h) und werden pro Request frisch erzeugt. Nur fuers Command Center.
@@ -51,18 +53,22 @@ export default async (req: Request, _context: Context) => {
   const limit = Number.isFinite(body?.limit) ? Math.min(500, Math.max(1, Math.floor(body.limit))) : 100
 
   const base = `client_sub=eq.${encodeURIComponent(email)}&order=created_at.desc`
-  let rows: any[]
-  try {
-    rows = await sbSelect(creds, 'portal_diary', `${base}&select=id,time_label,title,tag,detail,photo_path,created_at,eaten_at&limit=${limit}`)
-  } catch (err) {
-    // eaten_at-Spalte evtl. noch nicht angelegt → Fallback ohne (created_at bleibt die Zeit).
-    console.warn('[cc-client-diary] Select mit eaten_at fehlgeschlagen, Fallback ohne', (err as Error).message)
-    try {
-      rows = await sbSelect(creds, 'portal_diary', `${base}&select=id,time_label,title,tag,detail,photo_path,created_at&limit=${limit}`)
-    } catch (err2) {
-      console.error('[cc-client-diary] supabase select failed', err2)
-      return jsonResponse(500, { error: 'Tagebuch konnte nicht geladen werden.' })
-    }
+  // Select-Kaskade: neueste Spalten zuerst, dann schrittweise zurück (Spalte evtl. noch nicht
+  // angelegt) — das Cockpit-Tagebuch lädt dann trotzdem, nur ohne die neueren Felder.
+  const SELECTS = [
+    'id,time_label,title,tag,detail,photo_path,created_at,eaten_at,meta',
+    'id,time_label,title,tag,detail,photo_path,created_at,eaten_at',
+    'id,time_label,title,tag,detail,photo_path,created_at',
+  ]
+  let rows: any[] | null = null
+  let lastErr: unknown = null
+  for (const sel of SELECTS) {
+    try { rows = await sbSelect(creds, 'portal_diary', `${base}&select=${sel}&limit=${limit}`); break }
+    catch (err) { lastErr = err; console.warn('[cc-client-diary] Select fehlgeschlagen, Fallback:', (err as Error).message) }
+  }
+  if (!rows) {
+    console.error('[cc-client-diary] supabase select failed', lastErr)
+    return jsonResponse(500, { error: 'Tagebuch konnte nicht geladen werden.' })
   }
   try {
     const entries = await Promise.all(
@@ -80,6 +86,8 @@ export default async (req: Request, _context: Context) => {
           photoUrl,
           created_at: r.created_at,
           eaten_at: r.eaten_at ?? null,
+          // Trainings-Tagebuch: { kind:'training', muscle?, weightKg?, reps?, sets? } — sonst null.
+          meta: r.meta ?? null,
         }
       }),
     )

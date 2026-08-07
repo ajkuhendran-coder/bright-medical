@@ -40,19 +40,22 @@ export default async (req: Request, _context: Context) => {
   if (!creds) return jsonResponse(200, { ok: true, configured: false, entries: [] })
 
   const base = `client_sub=eq.${encodeURIComponent(payload.sub)}&order=created_at.desc`
-  let rows: any[]
-  try {
-    rows = await sbSelect(creds, 'portal_diary', `${base}&select=id,time_label,title,tag,detail,photo_path,created_at,eaten_at`)
-  } catch (err) {
-    // eaten_at-Spalte evtl. noch nicht angelegt → ohne sie laden (Anzeige fällt auf created_at zurück),
-    // damit ein Deploy VOR der SQL das bestehende Tagebuch nicht leert.
-    console.warn('[portal-diary] Select mit eaten_at fehlgeschlagen, Fallback ohne', (err as Error).message)
-    try {
-      rows = await sbSelect(creds, 'portal_diary', `${base}&select=id,time_label,title,tag,detail,photo_path,created_at`)
-    } catch (err2) {
-      console.error('[portal-diary] supabase select failed', err2)
-      return jsonResponse(500, { error: 'Tagebuch konnte nicht geladen werden.' })
-    }
+  // Select-Kaskade: neueste Spalten zuerst, dann schrittweise zurück — fehlt eine Spalte
+  // (SQL noch nicht ausgeführt), lädt das Tagebuch trotzdem, statt leer zu bleiben.
+  const SELECTS = [
+    'id,time_label,title,tag,detail,photo_path,created_at,eaten_at,meta',
+    'id,time_label,title,tag,detail,photo_path,created_at,eaten_at',
+    'id,time_label,title,tag,detail,photo_path,created_at',
+  ]
+  let rows: any[] | null = null
+  let lastErr: unknown = null
+  for (const sel of SELECTS) {
+    try { rows = await sbSelect(creds, 'portal_diary', `${base}&select=${sel}`); break }
+    catch (err) { lastErr = err; console.warn('[portal-diary] Select fehlgeschlagen, Fallback:', (err as Error).message) }
+  }
+  if (!rows) {
+    console.error('[portal-diary] supabase select failed', lastErr)
+    return jsonResponse(500, { error: 'Tagebuch konnte nicht geladen werden.' })
   }
   try {
     const entries = await Promise.all(
@@ -64,6 +67,7 @@ export default async (req: Request, _context: Context) => {
         detail: r.detail,
         created_at: r.created_at,
         eaten_at: r.eaten_at ?? null,
+        meta: r.meta ?? null,
         photoUrl: r.photo_path ? await sbSignedUrl(creds, 'diary-photos', r.photo_path).catch(() => null) : null,
       })),
     )

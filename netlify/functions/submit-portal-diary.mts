@@ -3,8 +3,13 @@
 // privaten Supabase-Storage (EU/Frankfurt) geladen, der Eintrag verweist per
 // photo_path darauf. Anzeige später über zeitlich begrenzte Signed-URLs.
 //
-// Method: POST · Body { token, title, tag, detail?, time?, photoBase64?, photoType? }
+// Method: POST · Body { token, title, tag, detail?, time?, eatenAt?, meta?, photoBase64?, photoType? }
 // Returns { ok, entry } / 4xx / 5xx. Echtheit über das signierte Portal-JWT.
+//
+// `meta` (jsonb) trägt strukturierte Zusatzangaben — aktuell das Sport-/Trainings-Tagebuch:
+// { kind:'training', muscle?, weightKg?, reps?, sets? }. Der Übungsname steht in `title`,
+// der Zeitpunkt in `eaten_at` (generischer Ereignis-Zeitpunkt). Streng gefiltert: nur bekannte
+// Schlüssel, Zahlen begrenzt — es wird NICHTS Beliebiges aus dem Client übernommen.
 
 import type { Context } from '@netlify/functions'
 import { randomUUID } from 'node:crypto'
@@ -17,6 +22,27 @@ const MAX_TITLE = 200
 const MAX_DETAIL = 1000
 const MAX_PHOTO_BYTES = 8 * 1024 * 1024 // 8 MB (komprimiert sind es i. d. R. < 500 KB)
 const ALLOWED_TAGS = new Set(['Mahlzeit', 'Bewegung', 'Schlaf', 'Notiz', 'Foto'])
+const MUSCLE_GROUPS = new Set(['Beine', 'Rücken', 'Brust', 'Schultern', 'Arme', 'Bauch', 'Ganzkörper', 'Cardio'])
+
+// meta streng säubern: nur bekannte Schlüssel, Zahlen in plausiblen Grenzen. Unbekanntes
+// wird verworfen (kein Durchreichen beliebiger Client-Daten in die DB). null = kein meta.
+function sanitizeMeta(raw: unknown): Record<string, unknown> | null {
+  if (!raw || typeof raw !== 'object') return null
+  const r = raw as Record<string, unknown>
+  if (r.kind !== 'training') return null
+  const num = (v: unknown, max: number, decimals = 0): number | undefined => {
+    const n = typeof v === 'number' ? v : typeof v === 'string' ? parseFloat(v.replace(',', '.')) : NaN
+    if (!Number.isFinite(n) || n <= 0 || n > max) return undefined
+    const f = 10 ** decimals
+    return Math.round(n * f) / f
+  }
+  const out: Record<string, unknown> = { kind: 'training' }
+  if (typeof r.muscle === 'string' && MUSCLE_GROUPS.has(r.muscle)) out.muscle = r.muscle
+  const w = num(r.weightKg, 500, 1); if (w !== undefined) out.weightKg = w
+  const reps = num(r.reps, 500); if (reps !== undefined) out.reps = reps
+  const sets = num(r.sets, 50); if (sets !== undefined) out.sets = sets
+  return out
+}
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -102,6 +128,8 @@ export default async (req: Request, _context: Context) => {
     }
   }
 
+  const meta = sanitizeMeta(body?.meta)
+
   const insertRow: Record<string, unknown> = {
     client_sub: payload.sub,
     subject_id: payload.subjectId ?? null,
@@ -111,23 +139,29 @@ export default async (req: Request, _context: Context) => {
     detail,
     photo_path: photoPath,
     eaten_at: eatenAtIso,
+    ...(meta ? { meta } : {}),
   }
-  let row: any
-  try {
-    const rows = await sbInsert(creds, 'portal_diary', insertRow)
-    row = Array.isArray(rows) ? rows[0] : rows
-  } catch (err) {
-    // eaten_at-Spalte evtl. noch nicht angelegt (SQL noch nicht ausgeführt) → ohne sie erneut
-    // versuchen, damit ein Deploy VOR der SQL das Speichern nicht bricht (created_at bleibt die Zeit).
-    console.warn('[submit-portal-diary] Insert mit eaten_at fehlgeschlagen, Retry ohne', (err as Error).message)
+  // Insert-Kaskade: fehlt eine der neueren Spalten in der DB (SQL noch nicht ausgeführt), wird
+  // sie weggelassen und erneut versucht — so bricht ein Deploy VOR der SQL das Speichern nie.
+  let row: any = null
+  let saved = false
+  let lastErr: unknown = null
+  for (const drop of [[] as string[], ['meta'], ['meta', 'eaten_at']]) {
+    const attempt = { ...insertRow }
+    for (const k of drop) delete attempt[k]
     try {
-      const { eaten_at, ...legacy } = insertRow
-      const rows = await sbInsert(creds, 'portal_diary', legacy)
+      const rows = await sbInsert(creds, 'portal_diary', attempt)
       row = Array.isArray(rows) ? rows[0] : rows
-    } catch (err2) {
-      console.error('[submit-portal-diary] supabase insert failed', err2)
-      return jsonResponse(500, { error: 'Eintrag konnte nicht gespeichert werden.' })
+      saved = true
+      break
+    } catch (err) {
+      lastErr = err
+      console.warn(`[submit-portal-diary] Insert fehlgeschlagen${drop.length ? ` (ohne ${drop.join('+')})` : ''}, nächster Versuch:`, (err as Error).message)
     }
+  }
+  if (!saved) {
+    console.error('[submit-portal-diary] supabase insert failed', lastErr)
+    return jsonResponse(500, { error: 'Eintrag konnte nicht gespeichert werden.' })
   }
 
   let photoUrl: string | null = null
@@ -151,6 +185,6 @@ export default async (req: Request, _context: Context) => {
   console.log(`✓ Portal-Tagebuch: ${payload.sub} (${tag}${photoPath ? '+Foto' : ''}, token=${tokenIdShort(token)})`)
   return jsonResponse(200, {
     ok: true,
-    entry: { id: row?.id, time_label: row?.time_label, title: row?.title, tag: row?.tag, detail: row?.detail, photoUrl, created_at: row?.created_at, eaten_at: row?.eaten_at ?? null },
+    entry: { id: row?.id, time_label: row?.time_label, title: row?.title, tag: row?.tag, detail: row?.detail, photoUrl, created_at: row?.created_at, eaten_at: row?.eaten_at ?? null, meta: row?.meta ?? null },
   })
 }

@@ -40,9 +40,11 @@ type PortalPayload = {
 
 type Tab = 'start' | 'tagebuch' | 'plan' | 'kontakt'
 type ThreadMsg = { from: 'coach' | 'me'; text: string; time: string; audioUrl?: string; audioSeconds?: number | null }
+// Strukturierte Zusatzangaben (Spalte portal_diary.meta) — aktuell das Trainings-Tagebuch.
+type TrainingMeta = { kind: 'training'; muscle?: string; weightKg?: number; reps?: number; sets?: number }
 type Entry =
   | { kind: 'day'; label: string }
-  | { kind: 'entry'; time: string; title: string; tag: string; detail: string; photo?: string }
+  | { kind: 'entry'; time: string; title: string; tag: string; detail: string; photo?: string; meta?: TrainingMeta | null }
 
 // Plan-Bausteine (festes Vokabular, kommen als JSONB aus portal_plans — bewusst lose typisiert).
 type PlanSectionData = { type: string; title?: string; body?: string; items?: string[]; variant?: string; plate?: boolean; badge?: string }
@@ -101,6 +103,19 @@ const MEAL_TYPES = [
   { emoji: '🌙', label: 'Abendessen' },
   { emoji: '🍎', label: 'Zwischendurch' },
 ] as const
+// Muskelgruppen fürs Trainings-Blatt (Schnellwahl; der genaue Übungsname wird frei eingetippt).
+// Muss zur Positivliste in submit-portal-diary.mts passen (sonst verwirft der Server den Wert).
+const MUSCLE_GROUPS = ['Beine', 'Rücken', 'Brust', 'Schultern', 'Arme', 'Bauch', 'Ganzkörper', 'Cardio'] as const
+// „40 kg × 10 Wdh. × 3 Sätze" — nur die Werte, die wirklich eingetragen wurden.
+function trainingSummary(m?: TrainingMeta | null): string {
+  if (!m || m.kind !== 'training') return ''
+  const parts: string[] = []
+  if (typeof m.weightKg === 'number') parts.push(`${String(m.weightKg).replace('.', ',')} kg`)
+  if (typeof m.reps === 'number') parts.push(`${m.reps} Wdh.`)
+  if (typeof m.sets === 'number') parts.push(`${m.sets} ${m.sets === 1 ? 'Satz' : 'Sätze'}`)
+  const line = parts.join(' × ')
+  return m.muscle ? (line ? `${m.muscle} · ${line}` : m.muscle) : line
+}
 function mealTypeForHour(h: number): string {
   if (h < 11) return 'Frühstück'
   if (h < 15) return 'Mittagessen'
@@ -139,7 +154,7 @@ function prependToday(prev: Entry[], entry: Entry): Entry[] {
   return [{ kind: 'day', label: today }, entry, ...prev]
 }
 // Server-Einträge (neueste zuerst) in die Tages-gruppierte Render-Liste umbauen.
-type ServerEntry = { time_label?: string; title: string; tag: string; detail?: string; photoUrl?: string | null; created_at: string; eaten_at?: string | null }
+type ServerEntry = { time_label?: string; title: string; tag: string; detail?: string; photoUrl?: string | null; created_at: string; eaten_at?: string | null; meta?: TrainingMeta | null }
 function toInterleaved(rows: ServerEntry[]): Entry[] {
   const eff = (r: ServerEntry) => new Date(r.eaten_at || r.created_at)
   const berlinHM = (d: Date) => d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' })
@@ -159,6 +174,7 @@ function toInterleaved(rows: ServerEntry[]): Entry[] {
       tag: r.tag,
       detail: r.detail || '',
       photo: r.photoUrl || undefined,
+      meta: r.meta ?? null,
     })
   }
   return out
@@ -505,6 +521,19 @@ export default function MeinProgramm() {
   const [sheetBusy, setSheetBusy] = useState(false)
   const [noteDay, setNoteDay] = useState<'heute' | 'gestern'>('heute')
   const [noteTime, setNoteTime] = useState<string>('')
+  // Trainings-Tagebuch: Filter der Zeitleiste + Eingabe-Blatt (Übung / Gewicht / Wdh. / Sätze / Foto).
+  const [diaryFilter, setDiaryFilter] = useState<'alle' | 'essen' | 'training'>('alle')
+  const [trainOpen, setTrainOpen] = useState(false)
+  const [trainMuscle, setTrainMuscle] = useState<string>('')
+  const [trainName, setTrainName] = useState('')
+  const [trainWeight, setTrainWeight] = useState('')
+  const [trainReps, setTrainReps] = useState('')
+  const [trainSets, setTrainSets] = useState('')
+  const [trainDay, setTrainDay] = useState<'heute' | 'gestern'>('heute')
+  const [trainTime, setTrainTime] = useState<string>('')
+  const [trainFile, setTrainFile] = useState<File | null>(null)
+  const [trainPreview, setTrainPreview] = useState<string | null>(null)
+  const trainFileRef = useRef<HTMLInputElement>(null)
   const [loading, setLoading] = useState({ thread: true, diary: true, plan: true })
   const [seenCoachCount, setSeenCoachCount] = useState(() => {
     try { return Number(localStorage.getItem('mp-seen-coach') || 0) } catch { return 0 }
@@ -674,6 +703,37 @@ export default function MeinProgramm() {
     setMealType(mealTypeForHour(parseInt(nowTime().split(':')[0], 10)))
     setMealTime(nowTime())
   }, [photoQueue])
+  // Vorschau fürs (optionale) Trainings-Foto — Objekt-URL sauber wieder freigeben.
+  useEffect(() => {
+    if (!trainFile) { setTrainPreview(null); return }
+    const u = URL.createObjectURL(trainFile)
+    setTrainPreview(u)
+    return () => URL.revokeObjectURL(u)
+  }, [trainFile])
+
+  // Zeitleiste nach Art filtern; Tages-Überschriften ohne Einträge fallen weg.
+  const visibleEntries = useMemo(() => {
+    if (diaryFilter === 'alle') return entries
+    const keep = (e: Extract<Entry, { kind: 'entry' }>) =>
+      diaryFilter === 'training' ? e.meta?.kind === 'training' || e.tag === 'Bewegung' : e.tag !== 'Bewegung' && e.meta?.kind !== 'training'
+    const out: Entry[] = []
+    for (const e of entries) {
+      if (e.kind === 'day') { if (out.length && out[out.length - 1].kind === 'day') out.pop(); out.push(e) }
+      else if (keep(e)) out.push(e)
+    }
+    if (out.length && out[out.length - 1].kind === 'day') out.pop()
+    return out
+  }, [entries, diaryFilter])
+  // Bereits genutzte Übungsnamen als Vorschläge (Wiederholung ohne Tippen).
+  const exerciseSuggestions = useMemo(() => {
+    const seen: string[] = []
+    for (const e of entries) {
+      if (e.kind !== 'entry' || e.meta?.kind !== 'training') continue
+      const t = (e.title || '').trim()
+      if (t && !seen.includes(t)) seen.push(t)
+    }
+    return seen.slice(0, 12)
+  }, [entries])
 
   // --- Push-Benachrichtigung (freiwillig, nur nach Consent) ---
   const savePush = useCallback(async (sub: PushSubscription) => {
@@ -818,6 +878,56 @@ export default function MeinProgramm() {
     }
     setSheetBusy(false)
     setPhotoQueue((q) => q.slice(1))
+  }
+
+  function closeTraining() {
+    setTrainOpen(false)
+    setTrainFile(null)
+    setTrainName(''); setTrainWeight(''); setTrainReps(''); setTrainSets(''); setTrainMuscle('')
+  }
+  // Trainings-Eintrag speichern: Übungsname → title, tag 'Bewegung', Werte → meta, Zeitpunkt → eatenAt.
+  // Foto ist optional (Dokumentation der Einstellung am Gerät).
+  async function saveTraining() {
+    const name = trainName.trim()
+    if (!name || sheetBusy) return
+    setSheetBusy(true)
+    setWriteError('')
+    const num = (s: string): number | undefined => {
+      const n = parseFloat(s.replace(',', '.'))
+      return Number.isFinite(n) && n > 0 ? n : undefined
+    }
+    const meta: TrainingMeta = { kind: 'training' }
+    if (trainMuscle) meta.muscle = trainMuscle
+    const w = num(trainWeight); if (w !== undefined) meta.weightKg = w
+    const r = num(trainReps); if (r !== undefined) meta.reps = Math.round(r)
+    const s = num(trainSets); if (s !== undefined) meta.sets = Math.round(s)
+
+    const time = trainTime || nowTime()
+    const eatenAtIso = buildEatenAtIso(trainDay, time)
+    const title = name.slice(0, 120)
+    let dataUrl: string | null = null
+    if (trainFile) {
+      try { dataUrl = await compressImage(trainFile) }
+      catch { setWriteError('Das Foto konnte nicht gelesen werden — der Eintrag wird ohne Bild gespeichert.') }
+    }
+    setEntries((prev) => prependToday(prev, { kind: 'entry', time, title, tag: 'Bewegung', detail: '', photo: dataUrl || undefined, meta }))
+    closeTraining()
+    if (token) {
+      try {
+        const res = await fetch('/.netlify/functions/submit-portal-diary', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            token, title, tag: 'Bewegung', time, eatenAt: eatenAtIso, meta,
+            ...(dataUrl ? { photoBase64: dataUrl.split(',')[1], photoType: 'image/jpeg' } : {}),
+          }),
+        })
+        if (res.status !== 503) {
+          if (!res.ok) setWriteError('Der Trainings-Eintrag konnte nicht gespeichert werden. Bitte erneut versuchen.')
+          void loadDiary()
+        }
+      } catch { /* offline → Eintrag bleibt lokal sichtbar */ }
+    }
+    setSheetBusy(false)
   }
 
   function submitConsent() {
@@ -1107,19 +1217,32 @@ export default function MeinProgramm() {
           {/* ---------- TAGEBUCH ---------- */}
           {tab === 'tagebuch' && (
             <div style={{ padding: '0 0 18px', animation: 'mp-rise .35s ease' }}>
-              <div style={{ padding: '14px 26px 8px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-                <div>
-                  <div style={{ ...serif, fontSize: 26, color: INK }}>Tagebuch</div>
-                  <div style={{ fontSize: 13, color: MUT, marginTop: 2 }}>Was Sie essen & bewegen — kurz notiert</div>
+              <div style={{ padding: '14px 26px 8px' }}>
+                <div style={{ ...serif, fontSize: 26, color: INK }}>Tagebuch</div>
+                <div style={{ fontSize: 13, color: MUT, marginTop: 2 }}>Was Sie essen & bewegen — kurz notiert</div>
+
+                {/* Ansicht filtern: Essen und Training in einer Zeitleiste oder getrennt */}
+                <div style={{ display: 'flex', gap: 4, marginTop: 12, background: '#EDF2F5', borderRadius: 12, padding: 3 }}>
+                  {([['alle', 'Alles'], ['essen', 'Essen'], ['training', 'Training']] as const).map(([key, label]) => {
+                    const on = diaryFilter === key
+                    return (
+                      <button key={key} onClick={() => setDiaryFilter(key)} aria-pressed={on} style={{ flex: 1, border: 'none', borderRadius: 10, padding: '8px 4px', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', background: on ? '#fff' : 'transparent', color: on ? INK : MUT, boxShadow: on ? '0 1px 3px rgba(20,49,77,.12)' : 'none' }}>{label}</button>
+                    )
+                  })}
                 </div>
-                <div style={{ flex: 'none', display: 'flex', gap: 8 }}>
-                  <button onClick={() => fileRef.current?.click()} aria-label="Foto hinzufügen" style={{ border: `1.5px solid ${ACC}`, background: '#fff', color: ACC_DK, fontFamily: 'inherit', fontSize: 13, fontWeight: 600, padding: '9px 12px', borderRadius: 11, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+
+                <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                  <button onClick={() => fileRef.current?.click()} aria-label="Mahlzeit-Foto hinzufügen" style={{ flex: 1, border: `1.5px solid ${ACC}`, background: '#fff', color: ACC_DK, fontFamily: 'inherit', fontSize: 13, fontWeight: 600, padding: '10px 6px', borderRadius: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer' }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>
                     Foto
                   </button>
-                  <button onClick={() => setNoteOpen((v) => { const nv = !v; if (nv) { setNoteDay('heute'); setNoteTime(nowTime()) } return nv })} style={{ border: 'none', background: INK, color: '#fff', fontFamily: 'inherit', fontSize: 13, fontWeight: 600, padding: '9px 14px', borderRadius: 11, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                  <button onClick={() => { setTrainOpen(true); setTrainDay('heute'); setTrainTime(nowTime()) }} aria-label="Training eintragen" style={{ flex: 1, border: `1.5px solid ${ACC}`, background: '#fff', color: ACC_DK, fontFamily: 'inherit', fontSize: 13, fontWeight: 600, padding: '10px 6px', borderRadius: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6.5 6.5v11M17.5 6.5v11M3 9.5v5M21 9.5v5M6.5 12h11" /></svg>
+                    Training
+                  </button>
+                  <button onClick={() => setNoteOpen((v) => { const nv = !v; if (nv) { setNoteDay('heute'); setNoteTime(nowTime()) } return nv })} style={{ flex: 1, border: 'none', background: INK, color: '#fff', fontFamily: 'inherit', fontSize: 13, fontWeight: 600, padding: '10px 6px', borderRadius: 11, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer' }}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-                    Eintrag
+                    Notiz
                   </button>
                 </div>
                 <input ref={fileRef} type="file" accept="image/*" multiple onChange={onPickPhoto} hidden />
@@ -1158,7 +1281,7 @@ export default function MeinProgramm() {
               )}
 
               <div style={{ padding: '14px 26px 0' }}>
-                {entries.map((e, i) =>
+                {visibleEntries.map((e, i) =>
                   e.kind === 'day' ? (
                     <div key={i} style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.12em', color: '#8295A2', textTransform: 'uppercase', margin: '18px 0 10px' }}>{e.label}</div>
                   ) : (
@@ -1169,16 +1292,25 @@ export default function MeinProgramm() {
                           <span style={{ fontSize: 15, fontWeight: 600, color: INK }}>{e.title}</span>
                           <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', padding: '2px 8px', borderRadius: 20, background: (TAG_COLORS[e.tag] || TAG_COLORS.Notiz)[0], color: (TAG_COLORS[e.tag] || TAG_COLORS.Notiz)[1] }}>{e.tag}</span>
                         </div>
+                        {trainingSummary(e.meta) && (
+                          <div style={{ fontSize: 13, fontWeight: 600, color: ACC_DK, marginTop: 3 }}>{trainingSummary(e.meta)}</div>
+                        )}
                         {e.detail && <div style={{ fontSize: 13, color: MUT, lineHeight: 1.45, marginTop: 3 }}>{e.detail}</div>}
                         {e.photo && <img src={e.photo} alt="Tagebuch-Foto" onClick={() => setLightbox(e.photo!)} style={{ display: 'block', width: '100%', maxHeight: 190, objectFit: 'cover', borderRadius: 10, marginTop: 9, cursor: 'zoom-in' }} />}
                       </div>
                     </div>
                   )
                 )}
-                {loading.diary && entries.length === 0 && <SkeletonCards n={3} />}
-                {!loading.diary && entries.length === 0 && (
+                {loading.diary && visibleEntries.length === 0 && <SkeletonCards n={3} />}
+                {!loading.diary && visibleEntries.length === 0 && (
                   <div style={{ padding: '34px 6px', textAlign: 'center', color: MUT, fontSize: 14, lineHeight: 1.6 }}>
-                    Noch keine Einträge.<br />Halten Sie Ihre erste Mahlzeit mit „Foto" oder „Eintrag" fest.
+                    {diaryFilter === 'training' ? (
+                      <>Noch keine Trainings-Einträge.<br />Halten Sie Ihre erste Übung mit „Training" fest — gern mit Foto vom Gerät.</>
+                    ) : diaryFilter === 'essen' ? (
+                      <>Noch keine Mahlzeiten.<br />Halten Sie Ihre erste Mahlzeit mit „Foto" oder „Notiz" fest.</>
+                    ) : (
+                      <>Noch keine Einträge.<br />Halten Sie Ihre erste Mahlzeit mit „Foto" oder Ihr Training mit „Training" fest.</>
+                    )}
                   </div>
                 )}
               </div>
@@ -1356,6 +1488,79 @@ export default function MeinProgramm() {
             </div>
             <button onClick={() => submitPhoto(false)} disabled={sheetBusy} style={{ width: '100%', border: 'none', background: INK, color: '#fff', fontFamily: 'inherit', fontSize: 15, fontWeight: 600, padding: 15, borderRadius: 12, cursor: sheetBusy ? 'default' : 'pointer', opacity: sheetBusy ? 0.6 : 1 }}>{sheetBusy ? 'Wird gespeichert …' : 'Speichern'}</button>
             <button onClick={() => submitPhoto(true)} disabled={sheetBusy} style={{ width: '100%', border: 'none', background: 'none', color: MUT, fontFamily: 'inherit', fontSize: 13.5, fontWeight: 600, padding: '12px 0 0', cursor: sheetBusy ? 'default' : 'pointer' }}>Überspringen</button>
+          </div>
+        </div>
+      )}
+      {trainOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'rgba(10,20,32,0.5)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+          <div style={{ width: '100%', maxWidth: 420, background: '#fff', borderRadius: '20px 20px 0 0', padding: '18px 22px calc(env(safe-area-inset-bottom) + 20px)', maxHeight: '92dvh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <div style={{ ...serif, fontSize: 21, color: INK }}>Training eintragen</div>
+              <button onClick={closeTraining} aria-label="Schließen" style={{ border: 'none', background: 'none', color: MUT, fontSize: 26, lineHeight: 1, cursor: 'pointer', padding: 0 }}>×</button>
+            </div>
+
+            {trainPreview ? (
+              <div style={{ position: 'relative', marginBottom: 16 }}>
+                <img src={trainPreview} alt="Vorschau" style={{ width: '100%', maxHeight: 190, objectFit: 'cover', borderRadius: 12, display: 'block' }} />
+                <button onClick={() => setTrainFile(null)} aria-label="Foto entfernen" style={{ position: 'absolute', top: 8, right: 8, width: 32, height: 32, borderRadius: '50%', border: 'none', background: 'rgba(10,20,32,0.6)', color: '#fff', fontSize: 19, lineHeight: 1, cursor: 'pointer' }}>×</button>
+              </div>
+            ) : (
+              <button onClick={() => trainFileRef.current?.click()} style={{ width: '100%', border: `1px dashed ${ACC}`, background: '#F7FCFD', color: ACC_DK, fontFamily: 'inherit', fontSize: 13.5, fontWeight: 600, padding: '13px 6px', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', marginBottom: 16 }}>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>
+                Foto vom Gerät hinzufügen (optional)
+              </button>
+            )}
+            <input ref={trainFileRef} type="file" accept="image/*" onChange={(ev) => { const f = ev.target.files?.[0]; ev.target.value = ''; if (f && f.type.startsWith('image/')) setTrainFile(f) }} hidden />
+
+            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.1em', color: MUT, textTransform: 'uppercase', marginBottom: 9 }}>Welcher Bereich?</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 16 }}>
+              {MUSCLE_GROUPS.map((mg) => {
+                const on = trainMuscle === mg
+                return (
+                  <button key={mg} onClick={() => setTrainMuscle(on ? '' : mg)} style={{ fontSize: 13, fontWeight: 600, padding: '9px 13px', borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit', border: on ? `1.5px solid ${ACC}` : '1px solid #E3E8EE', background: on ? '#F2FAFC' : '#fff', color: on ? ACC_DK : INK }}>{mg}</button>
+                )
+              })}
+            </div>
+
+            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.1em', color: MUT, textTransform: 'uppercase', marginBottom: 9 }}>Welche Übung?</div>
+            <input
+              value={trainName}
+              onChange={(ev) => setTrainName(ev.target.value)}
+              list="mp-exercises"
+              autoFocus
+              maxLength={120}
+              placeholder="z. B. Beinpresse"
+              style={{ width: '100%', boxSizing: 'border-box', border: `1px solid ${LINE}`, background: '#F7F9FB', borderRadius: 12, padding: '12px 13px', fontFamily: 'inherit', fontSize: 16, color: INK, marginBottom: 16 }}
+            />
+            <datalist id="mp-exercises">{exerciseSuggestions.map((s) => <option key={s} value={s} />)}</datalist>
+
+            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.1em', color: MUT, textTransform: 'uppercase', marginBottom: 9 }}>Gewicht & Umfang <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 600, color: OFF }}>· optional</span></div>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+              {([
+                { v: trainWeight, set: setTrainWeight, ph: 'kg', label: 'Gewicht (kg)', step: '0.5' },
+                { v: trainReps, set: setTrainReps, ph: 'Wdh.', label: 'Wiederholungen', step: '1' },
+                { v: trainSets, set: setTrainSets, ph: 'Sätze', label: 'Sätze', step: '1' },
+              ] as const).map((f) => (
+                <input
+                  key={f.label}
+                  value={f.v}
+                  onChange={(ev) => f.set(ev.target.value.replace(/[^\d.,]/g, ''))}
+                  inputMode="decimal"
+                  aria-label={f.label}
+                  placeholder={f.ph}
+                  style={{ flex: 1, minWidth: 0, boxSizing: 'border-box', border: `1px solid ${LINE}`, background: '#F7F9FB', borderRadius: 12, padding: '12px 10px', fontFamily: 'inherit', fontSize: 16, color: INK, textAlign: 'center' }}
+                />
+              ))}
+            </div>
+
+            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.1em', color: MUT, textTransform: 'uppercase', marginBottom: 9 }}>Wann trainiert?</div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 20 }}>
+              <button onClick={() => setTrainDay('heute')} style={{ fontSize: 13.5, fontWeight: 600, padding: '10px 16px', borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit', border: trainDay === 'heute' ? `1.5px solid ${ACC}` : '1px solid #E3E8EE', background: trainDay === 'heute' ? '#F2FAFC' : '#fff', color: trainDay === 'heute' ? ACC_DK : INK }}>Heute</button>
+              <button onClick={() => setTrainDay('gestern')} style={{ fontSize: 13.5, fontWeight: 600, padding: '10px 16px', borderRadius: 12, cursor: 'pointer', fontFamily: 'inherit', border: trainDay === 'gestern' ? `1.5px solid ${ACC}` : '1px solid #E3E8EE', background: trainDay === 'gestern' ? '#F2FAFC' : '#fff', color: trainDay === 'gestern' ? ACC_DK : INK }}>Gestern</button>
+              <input type="time" value={trainTime} onChange={(ev) => setTrainTime(ev.target.value)} aria-label="Uhrzeit" style={{ marginLeft: 'auto', border: `1px solid ${LINE}`, borderRadius: 12, padding: '9px 12px', fontFamily: 'inherit', fontSize: 16, color: INK, background: '#F7F9FB' }} />
+            </div>
+
+            <button onClick={saveTraining} disabled={!trainName.trim() || sheetBusy} style={{ width: '100%', border: 'none', background: INK, color: '#fff', fontFamily: 'inherit', fontSize: 15, fontWeight: 600, padding: 15, borderRadius: 12, cursor: !trainName.trim() || sheetBusy ? 'default' : 'pointer', opacity: !trainName.trim() || sheetBusy ? 0.5 : 1 }}>{sheetBusy ? 'Wird gespeichert …' : 'Speichern'}</button>
           </div>
         </div>
       )}
