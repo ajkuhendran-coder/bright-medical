@@ -17,32 +17,12 @@ import { verifyPortalToken, tokenIdShort } from './_shared/jwt.js'
 import { notifyCC } from './_shared/notify-cc.ts'
 import { notifyAdminPortalActivity } from './_shared/notify-admin.ts'
 import { getSupabaseCreds, sbInsert, sbUpload, sbSignedUrl } from './_shared/supabase.ts'
+import { sanitizeMeta } from './_shared/diary-meta.ts'
 
 const MAX_TITLE = 200
 const MAX_DETAIL = 1000
 const MAX_PHOTO_BYTES = 8 * 1024 * 1024 // 8 MB (komprimiert sind es i. d. R. < 500 KB)
 const ALLOWED_TAGS = new Set(['Mahlzeit', 'Bewegung', 'Schlaf', 'Notiz', 'Foto'])
-const MUSCLE_GROUPS = new Set(['Beine', 'Rücken', 'Brust', 'Schultern', 'Arme', 'Bauch', 'Ganzkörper', 'Cardio'])
-
-// meta streng säubern: nur bekannte Schlüssel, Zahlen in plausiblen Grenzen. Unbekanntes
-// wird verworfen (kein Durchreichen beliebiger Client-Daten in die DB). null = kein meta.
-function sanitizeMeta(raw: unknown): Record<string, unknown> | null {
-  if (!raw || typeof raw !== 'object') return null
-  const r = raw as Record<string, unknown>
-  if (r.kind !== 'training') return null
-  const num = (v: unknown, max: number, decimals = 0): number | undefined => {
-    const n = typeof v === 'number' ? v : typeof v === 'string' ? parseFloat(v.replace(',', '.')) : NaN
-    if (!Number.isFinite(n) || n <= 0 || n > max) return undefined
-    const f = 10 ** decimals
-    return Math.round(n * f) / f
-  }
-  const out: Record<string, unknown> = { kind: 'training' }
-  if (typeof r.muscle === 'string' && MUSCLE_GROUPS.has(r.muscle)) out.muscle = r.muscle
-  const w = num(r.weightKg, 500, 1); if (w !== undefined) out.weightKg = w
-  const reps = num(r.reps, 500); if (reps !== undefined) out.reps = reps
-  const sets = num(r.sets, 50); if (sets !== undefined) out.sets = sets
-  return out
-}
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
