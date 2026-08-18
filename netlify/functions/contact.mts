@@ -187,17 +187,6 @@ export default async (req: Request, _context: Context) => {
         )
       }
     }
-    // In der Lead-Zeile vermerken, ob die Benachrichtigung nachweislich rausging.
-    if (creds && leadId) {
-      try {
-        await fetch(`${creds.url}/rest/v1/leads?id=eq.${leadId}`, {
-          method: 'PATCH',
-          headers: { apikey: creds.serviceKey, Authorization: `Bearer ${creds.serviceKey}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-          body: JSON.stringify({ mail_ok: !adminError }),
-        })
-      } catch { /* Vermerk ist Beiwerk — der Lead selbst ist bereits gesichert */ }
-    }
-
     // 2. Send confirmation to prospect (E0a template)
     const confirmResult = await resend.emails.send({
       from: FROM_EMAIL,
@@ -211,14 +200,29 @@ export default async (req: Request, _context: Context) => {
     const confirmError = (confirmResult as any)?.error
     if (confirmError) console.warn('[contact] Bestätigungsmail an Interessent fehlgeschlagen:', JSON.stringify(confirmError))
 
-    // 3. Notify Command Center (best-effort, errors swallowed by helper)
-    await notifyCC({
+    // 3. Command Center benachrichtigen. Wirft nie, meldet aber jetzt zurück, ob es ankam.
+    const ccResult = await notifyCC({
       event: 'bm.lead.captured',
       email,
       name,
       phone: phone || undefined,
       data: { message, ip },
     })
+    if (!ccResult.ok) {
+      console.error('[contact] ⚠️ Command Center NICHT benachrichtigt —', ccResult.reason, '| Lead:', JSON.stringify({ leadId, name, email }))
+    }
+
+    // In der Lead-Zeile festhalten, ob Benachrichtigung UND Cockpit-Meldung ankamen.
+    // So ist ohne Log-Zugriff sichtbar, wenn eine der beiden Strecken still ausfällt.
+    if (creds && leadId) {
+      try {
+        await fetch(`${creds.url}/rest/v1/leads?id=eq.${leadId}`, {
+          method: 'PATCH',
+          headers: { apikey: creds.serviceKey, Authorization: `Bearer ${creds.serviceKey}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+          body: JSON.stringify({ mail_ok: !adminError, cc_ok: ccResult.ok }),
+        })
+      } catch { /* Vermerk ist Beiwerk — der Lead selbst ist bereits gesichert */ }
+    }
 
     return new Response(JSON.stringify({ success: true }), { status: 200 })
   } catch (error) {
