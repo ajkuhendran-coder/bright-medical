@@ -201,12 +201,15 @@ export default async (req: Request, _context: Context) => {
     if (confirmError) console.warn('[contact] Bestätigungsmail an Interessent fehlgeschlagen:', JSON.stringify(confirmError))
 
     // 3. Command Center benachrichtigen. Wirft nie, meldet aber jetzt zurück, ob es ankam.
+    // `adminMailFailed` markiert den Lead im Cockpit als DRINGEND: Dr. K hat dann keine
+    // Mail bekommen und würde ihn sonst übersehen. So hängt die Benachrichtigung nicht
+    // mehr an einem einzigen Kanal.
     const ccResult = await notifyCC({
       event: 'bm.lead.captured',
       email,
       name,
       phone: phone || undefined,
-      data: { message, ip },
+      data: { message, ip, adminMailFailed: !!adminError },
     })
     if (!ccResult.ok) {
       console.error('[contact] ⚠️ Command Center NICHT benachrichtigt —', ccResult.reason, '| Lead:', JSON.stringify({ leadId, name, email }))
