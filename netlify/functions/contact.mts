@@ -3,6 +3,7 @@ import type { Context } from '@netlify/functions'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { notifyCC } from './_shared/notify-cc.ts'
+import { getSupabaseCreds, sbInsert } from './_shared/supabase.ts'
 
 const ADMIN_EMAIL = 'info@brightmedical.de'
 const FROM_EMAIL = 'Bright Medical <noreply@brightmedical.de>'
@@ -134,8 +135,24 @@ export default async (req: Request, _context: Context) => {
     const safeMessage = escapeHtml(message)
     const safeFirstName = escapeHtml(name.split(' ')[0])
 
+    // 0. Lead ZUERST sichern — bevor irgendein Mailversand scheitern kann.
+    // Ohne das war eine Anfrage spurlos weg, wenn Resend sie ablehnte (Kontingent, DNS,
+    // Bounce): der Interessent sah trotzdem "erfolgreich gesendet".
+    let leadSaved = false
+    let leadId: string | null = null
+    const creds = getSupabaseCreds()
+    if (creds) {
+      try {
+        const rows = await sbInsert(creds, 'leads', { name, email, phone: phone || null, message, ip, source: 'contact-form' })
+        leadId = (Array.isArray(rows) ? rows[0] : rows)?.id ?? null
+        leadSaved = true
+      } catch (err) {
+        console.warn('[contact] Lead-Speicherung fehlgeschlagen (Tabelle leads angelegt?):', (err as Error).message)
+      }
+    }
+
     // 1. Send admin notification
-    await resend.emails.send({
+    const adminResult = await resend.emails.send({
       from: FROM_EMAIL,
       to: ADMIN_EMAIL,
       subject: `Neue Anfrage — ${safeName}`,
@@ -151,14 +168,48 @@ export default async (req: Request, _context: Context) => {
       `,
     })
 
+    // ⚠️ Resend WIRFT bei API-Fehlern nicht, sondern liefert { data, error }. Ohne diese
+    // Prüfung meldete die Seite "gesendet", obwohl die Benachrichtigung nie ankam.
+    const adminError = (adminResult as any)?.error
+    if (adminError) {
+      console.error(
+        '[contact] ⚠️ ADMIN-MAIL FEHLGESCHLAGEN —',
+        JSON.stringify(adminError),
+        '| Lead:', JSON.stringify({ leadId, name, email, phone, message }),
+      )
+      // Ist der Lead in der DB gesichert, geht er nicht verloren → dem Interessenten kann
+      // ehrlich bestätigt werden. Ohne Sicherung wäre er weg: dann klar fehlschlagen,
+      // damit er es erneut versucht oder direkt schreibt.
+      if (!leadSaved) {
+        return new Response(
+          JSON.stringify({ error: 'Ihre Anfrage konnte nicht zugestellt werden. Bitte schreiben Sie uns direkt an info@brightmedical.de.' }),
+          { status: 502 },
+        )
+      }
+    }
+    // In der Lead-Zeile vermerken, ob die Benachrichtigung nachweislich rausging.
+    if (creds && leadId) {
+      try {
+        await fetch(`${creds.url}/rest/v1/leads?id=eq.${leadId}`, {
+          method: 'PATCH',
+          headers: { apikey: creds.serviceKey, Authorization: `Bearer ${creds.serviceKey}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+          body: JSON.stringify({ mail_ok: !adminError }),
+        })
+      } catch { /* Vermerk ist Beiwerk — der Lead selbst ist bereits gesichert */ }
+    }
+
     // 2. Send confirmation to prospect (E0a template)
-    await resend.emails.send({
+    const confirmResult = await resend.emails.send({
       from: FROM_EMAIL,
       replyTo: ADMIN_EMAIL,
       to: email,
       subject: 'Ihre Anfrage ist bei uns angekommen',
       html: renderE0a(safeFirstName),
     })
+
+    // Bestätigungsmail an den Interessenten ist unkritisch — Hauptsache Dr. K erfährt vom Lead.
+    const confirmError = (confirmResult as any)?.error
+    if (confirmError) console.warn('[contact] Bestätigungsmail an Interessent fehlgeschlagen:', JSON.stringify(confirmError))
 
     // 3. Notify Command Center (best-effort, errors swallowed by helper)
     await notifyCC({
