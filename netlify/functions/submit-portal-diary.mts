@@ -18,6 +18,7 @@ import { notifyCC } from './_shared/notify-cc.ts'
 import { notifyAdminPortalActivity } from './_shared/notify-admin.ts'
 import { getSupabaseCreds, sbInsert, sbUpload, sbSignedUrl } from './_shared/supabase.ts'
 import { sanitizeMeta } from './_shared/diary-meta.ts'
+import { isAccessRevoked, revokedResponse } from './_shared/portal-access.ts'
 
 const MAX_TITLE = 200
 const MAX_DETAIL = 1000
@@ -66,6 +67,7 @@ export default async (req: Request, _context: Context) => {
     return jsonResponse(code, { error: 'Ungültiger oder abgelaufener Link', reason: verified.reason })
   }
   const payload = verified.payload
+  if (await isAccessRevoked(payload.sub)) return revokedResponse(CORS_HEADERS)
 
   // Rate-Limit an die geprüfte Token-Identität binden (nicht an den fälschbaren x-forwarded-for-Header).
   if (isRateLimited(payload.sub)) return jsonResponse(429, { error: 'Zu viele Anfragen. Bitte später erneut.' })

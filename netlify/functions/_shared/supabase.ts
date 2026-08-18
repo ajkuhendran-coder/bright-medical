@@ -78,6 +78,27 @@ export async function sbUpload(
   if (!res.ok) throw new Error(`Supabase upload ${bucket}/${path} ${res.status}: ${await res.text()}`)
 }
 
+// Storage: Objekte endgültig löschen (Batch). Wichtig für die Löschpflicht: DB-Zeilen allein
+// entfernen die Dateien NICHT — Fotos/Sprachnachrichten müssen über die Storage-API weg.
+// Gibt die Zahl der tatsächlich gelöschten Objekte zurück.
+export async function sbDeleteObjects(creds: SupabaseCreds, bucket: string, paths: string[]): Promise<number> {
+  if (!paths.length) return 0
+  let deleted = 0
+  // In Blöcken, damit sehr lange Listen die Storage-API nicht überfordern.
+  for (let i = 0; i < paths.length; i += 100) {
+    const chunk = paths.slice(i, i + 100)
+    const res = await fetch(`${creds.url}/storage/v1/object/${bucket}`, {
+      method: 'DELETE',
+      headers: { ...authHeaders(creds), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prefixes: chunk }),
+    })
+    if (!res.ok) throw new Error(`Supabase storage delete ${bucket} ${res.status}: ${await res.text()}`)
+    const data = await res.json().catch(() => [])
+    deleted += Array.isArray(data) ? data.length : chunk.length
+  }
+  return deleted
+}
+
 // Storage: zeitlich begrenzte Signed-URL für ein privates Objekt erzeugen
 export async function sbSignedUrl(
   creds: SupabaseCreds,

@@ -7,6 +7,7 @@
 import type { Context } from '@netlify/functions'
 import { verifyPortalToken } from './_shared/jwt.js'
 import { getSupabaseCreds } from './_shared/supabase.ts'
+import { isAccessRevoked, revokedResponse } from './_shared/portal-access.ts'
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -35,6 +36,7 @@ export default async (req: Request, _context: Context) => {
     const code = verified.reason === 'expired' ? 401 : 400
     return jsonResponse(code, { error: 'Ungültiger oder abgelaufener Link', reason: verified.reason })
   }
+  if (await isAccessRevoked(verified.payload.sub)) return revokedResponse(CORS_HEADERS)
 
   const sub = body?.subscription
   const endpoint = typeof sub?.endpoint === 'string' ? sub.endpoint : ''

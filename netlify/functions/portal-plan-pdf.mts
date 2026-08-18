@@ -14,6 +14,7 @@ import { fileURLToPath } from 'node:url'
 import { verifyPortalToken } from './_shared/jwt.js'
 import { getSupabaseCreds, sbSelect } from './_shared/supabase.ts'
 import { buildPlanPdf, type PlanPdfAssets } from './_shared/plan-pdf.ts'
+import { isAccessRevoked, revokedResponse } from './_shared/portal-access.ts'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -82,6 +83,7 @@ export default async (req: Request, _context: Context) => {
       return jsonResponse(code, { error: 'Ungültiger oder abgelaufener Link', reason: verified.reason })
     }
     clientSub = verified.payload.sub
+    if (await isAccessRevoked(clientSub)) return revokedResponse(CORS_HEADERS)
     if (!name) name = verified.payload.name || null
   }
 

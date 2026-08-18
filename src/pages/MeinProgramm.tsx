@@ -546,6 +546,8 @@ export default function MeinProgramm() {
   const [entries, setEntries] = useState<Entry[]>([])
   const [plan, setPlan] = useState<PlanData | null>(null)
   const [portalState, setPortalState] = useState<PortalState | null>(null)
+  // Zugang bei Programmende geschlossen (server-seitig, portal-state meldet revoked).
+  const [accessRevoked, setAccessRevoked] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const threadEndRef = useRef<HTMLDivElement>(null)
   const [noteOpen, setNoteOpen] = useState(false)
@@ -647,6 +649,9 @@ export default function MeinProgramm() {
       })
       if (!res.ok) return
       const data = await res.json()
+      // Zugang vom Coach geschlossen → Abschluss-Screen statt Daten (die datentragenden
+      // Functions liefern parallel 403, das hier ist das freundliche Signal fürs UI).
+      if (data?.revoked === true) { setAccessRevoked(true); return }
       if (data?.configured && data.state) setPortalState(data.state as PortalState)
     } catch { /* offline → Token-Werte bleiben */ }
   }, [token])
@@ -954,6 +959,31 @@ export default function MeinProgramm() {
           <h1 style={{ ...serif, fontSize: 23, color: INK, marginBottom: 12 }}>Link nicht gültig</h1>
           <p style={{ color: MUT, fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
             Dieser Zugang ist ungültig oder abgelaufen. Bitte fordern Sie einen neuen Link an unter{' '}
+            <a href="mailto:info@brightmedical.de" style={{ color: ACC_DK }}>info@brightmedical.de</a>.
+          </p>
+          <a href="https://brightmedical.de" style={{ display: 'inline-block', background: INK, color: '#fff', textDecoration: 'none', borderRadius: 99, padding: '11px 24px', fontWeight: 600, fontSize: 14 }}>Zur Startseite</a>
+        </div>
+        <PortalStyles />
+      </div>
+    )
+  }
+
+  // ---- Programm abgeschlossen, Zugang geschlossen (vom Coach im Cockpit gesetzt) ----
+  // Bewusst warm formuliert: das ist ein Abschied, keine Fehlermeldung. Die Daten sind
+  // server-seitig gesperrt (403) — hier steht nur noch, was gilt und wie man uns erreicht.
+  if (accessRevoked) {
+    return (
+      <div className="mp-page" style={{ alignItems: 'center' }}>
+        <div style={{ maxWidth: 380, width: '100%', background: '#fff', border: `1px solid ${LINE}`, borderRadius: 22, padding: '40px 28px', textAlign: 'center', boxShadow: '0 20px 50px -20px rgba(20,49,77,.35)' }}>
+          <div style={{ width: 54, height: 54, borderRadius: '50%', background: '#EAF6F9', border: '1px solid #CDE9F0', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', color: ACC_DK }}>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+          </div>
+          <h1 style={{ ...serif, fontSize: 23, color: INK, marginBottom: 12 }}>Ihr Programm ist abgeschlossen</h1>
+          <p style={{ color: MUT, fontSize: 14, lineHeight: 1.6, marginBottom: 20 }}>
+            Vielen Dank, dass Sie diesen Weg gegangen sind{payload?.name ? `, ${payload.name.split(' ')[0]}` : ''}. Dieser persönliche Bereich ist damit nicht mehr aktiv.
+          </p>
+          <p style={{ color: MUT, fontSize: 13.5, lineHeight: 1.6, marginBottom: 24 }}>
+            Wenn Sie Unterlagen benötigen oder weitermachen möchten, schreiben Sie uns gern an{' '}
             <a href="mailto:info@brightmedical.de" style={{ color: ACC_DK }}>info@brightmedical.de</a>.
           </p>
           <a href="https://brightmedical.de" style={{ display: 'inline-block', background: INK, color: '#fff', textDecoration: 'none', borderRadius: 99, padding: '11px 24px', fontWeight: 600, fontSize: 14 }}>Zur Startseite</a>

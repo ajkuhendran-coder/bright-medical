@@ -1,6 +1,9 @@
 // cc-set-state — Command Center setzt die LIVE Start-Inhalte EINER Klientin (Woche / Fokus / Termin).
 // Method: POST · Auth: Authorization: Bearer <CC_API_SECRET> (wie cc-upsert-plan — CCs Schreibweg zu BM)
-// Body: { email, weekCurrent?, weekTotal?, focusTitle?, focusText?, focusStep?, nextCallHuman?, nextCallUrl?, completed? }
+// Body: { email, weekCurrent?, weekTotal?, focusTitle?, focusText?, focusStep?, nextCallHuman?,
+//         nextCallUrl?, completed?, accessRevoked? }
+// accessRevoked=true → Portal-Zugang sofort dicht (alle Portal-Functions antworten 403).
+// NICHT dasselbe wie completed (= nur Abschluss-Screen, sperrt nicht aus).
 // Upsert auf client_sub (EINE Zeile pro Klientin). NUR gesetzte Felder werden geschrieben (partielles
 // Update; ein Feld als "" leert es, ein weggelassenes Feld bleibt unverändert). Kein version-Tracking
 // (nur der aktuelle Stand). Human-in-the-loop: der Speichern-Klick passiert IM Cockpit.
@@ -56,11 +59,25 @@ export default async (req: Request, _context: Context) => {
   const nh = str(body?.nextCallHuman, 120); if (nh !== undefined) row.next_call_human = nh || null
   const nu = str(body?.nextCallUrl, 400); if (nu !== undefined) row.next_call_url = nu && /^https?:\/\//.test(nu) ? nu : null
   if (typeof body?.completed === 'boolean') row.completed = body.completed
+  // Zugangssperre bei Programmende (CC setzt sie beim „abgeschlossen"-Klick). BEWUSST getrennt
+  // von `completed`: das zeigt nur den Abschluss-Screen und sperrt niemanden aus.
+  if (typeof body?.accessRevoked === 'boolean') row.access_revoked = body.accessRevoked
 
-  try {
-    await sbUpsert(creds, 'portal_state', row, 'client_sub')
-  } catch (err) {
-    console.error('[cc-set-state] upsert failed', err)
+  // Upsert-Kaskade: fehlt die (neuere) Spalte access_revoked, wird sie weggelassen und erneut
+  // versucht — sonst würde ein Aufruf VOR der SQL auch das Speichern von Woche/Fokus killen.
+  let ok = false
+  let lastErr: unknown = null
+  for (const drop of [[] as string[], ['access_revoked']]) {
+    const attempt = { ...row }
+    for (const k of drop) delete attempt[k]
+    try { await sbUpsert(creds, 'portal_state', attempt, 'client_sub'); ok = true; break }
+    catch (err) {
+      lastErr = err
+      if (!drop.length && 'access_revoked' in row) console.warn('[cc-set-state] Upsert mit access_revoked fehlgeschlagen (Spalte fehlt?), Retry ohne:', (err as Error).message)
+    }
+  }
+  if (!ok) {
+    console.error('[cc-set-state] upsert failed', lastErr)
     return jsonResponse(500, { error: 'Status konnte nicht gespeichert werden.' })
   }
   const setFields = Object.keys(row).filter((k) => k !== 'client_sub' && k !== 'updated_at')

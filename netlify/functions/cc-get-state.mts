@@ -45,7 +45,7 @@ export default async (req: Request, _context: Context) => {
     const rows = await sbSelect(
       creds,
       'portal_state',
-      `client_sub=eq.${encodeURIComponent(email)}&limit=1&select=week_current,week_total,focus_title,focus_text,focus_step,next_call_human,next_call_url,completed,updated_at`,
+      `client_sub=eq.${encodeURIComponent(email)}&limit=1&select=week_current,week_total,focus_title,focus_text,focus_step,next_call_human,next_call_url,completed,access_revoked,updated_at`,
     )
     const r = rows[0]
     const state = r
@@ -58,6 +58,7 @@ export default async (req: Request, _context: Context) => {
           nextCallHuman: r.next_call_human ?? null,
           nextCallUrl: r.next_call_url ?? null,
           completed: r.completed ?? false,
+          accessRevoked: r.access_revoked ?? false,
           updatedAt: r.updated_at ?? null,
         }
       : null

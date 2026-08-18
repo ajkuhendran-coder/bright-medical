@@ -9,6 +9,7 @@ import type { Context } from '@netlify/functions'
 import { verifyPortalToken } from './_shared/jwt.js'
 import { getSupabaseCreds, sbInsert } from './_shared/supabase.ts'
 import { notifyClientConsent } from './_shared/notify-client.ts'
+import { isAccessRevoked, revokedResponse } from './_shared/portal-access.ts'
 
 // Textstand der Einwilligungserklärung (coaching-vertrag-einwilligung.pdf, Stand Juni 2026).
 const CONSENT_VERSION = 'einwilligung-gesundheitsdaten-2026-06'
@@ -46,6 +47,7 @@ export default async (req: Request, _context: Context) => {
 
   const v = verifyPortalToken(token, jwtSecret)
   if (!v.ok) return jsonResponse(401, { error: 'Ungültiger oder abgelaufener Link', reason: v.reason })
+  if (await isAccessRevoked(v.payload.sub)) return revokedResponse(CORS_HEADERS)
 
   const creds = getSupabaseCreds()
   if (!creds) return jsonResponse(503, { error: 'Supabase nicht konfiguriert (env)' })

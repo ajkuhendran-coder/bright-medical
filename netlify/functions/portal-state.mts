@@ -41,13 +41,22 @@ export default async (req: Request, _context: Context) => {
   const creds = getSupabaseCreds()
   if (!creds) return jsonResponse(200, { ok: true, configured: false, state: null })
 
+  // Diese Function antwortet bei gesperrtem Zugang bewusst mit 200 + revoked:true (statt 403):
+  // sie ist das Start-Signal fürs Portal, das damit einen freundlichen Abschluss-Screen zeigt.
+  // Die datentragenden Functions (Thread/Tagebuch/Plan/PDF/Schreibwege) liefern 403.
+  const FIELDS = 'week_current,week_total,focus_title,focus_text,focus_step,next_call_human,next_call_url,completed,updated_at'
   try {
-    const rows = await sbSelect(
-      creds,
-      'portal_state',
-      `client_sub=eq.${encodeURIComponent(verified.payload.sub)}&limit=1&select=week_current,week_total,focus_title,focus_text,focus_step,next_call_human,next_call_url,completed,updated_at`,
-    )
+    let rows: any[]
+    try {
+      rows = await sbSelect(creds, 'portal_state', `client_sub=eq.${encodeURIComponent(verified.payload.sub)}&limit=1&select=${FIELDS},access_revoked`)
+    } catch {
+      // access_revoked-Spalte evtl. noch nicht angelegt → ohne sie laden (Zugang bleibt offen).
+      rows = await sbSelect(creds, 'portal_state', `client_sub=eq.${encodeURIComponent(verified.payload.sub)}&limit=1&select=${FIELDS}`)
+    }
     const r = rows[0]
+    if (r?.access_revoked === true) {
+      return jsonResponse(200, { ok: true, configured: true, revoked: true, state: null })
+    }
     const state = r
       ? {
           weekCurrent: r.week_current ?? null,
